@@ -1,0 +1,33 @@
+<div class="p-4 bg-gray-800 text-white rounded-md w-64 mx-auto mt-10">
+  <h2 class="text-lg font-bold mb-2">Oscillator</h2>
+
+  <label class="block mb-2">
+    Frequency: {{ frequency }} Hz
+    <input
+      type="range"
+      min="100"
+      max="1000"
+      [(ngModel)]="frequency"
+      (input)="setFrequency(frequency)"
+      class="w-full"
+    />
+  </label>
+
+  <label class="block mb-4">
+    Waveform:
+    <select [(ngModel)]="waveform" (change)="setWaveform(waveform)"
+      class="w-full bg-gray-700 text-white p-1 rounded">
+      <option value="sine">Sine</option>
+      <option value="square">Square</option>
+      <option value="sawtooth">Sawtooth</option>
+      <option value="triangle">Triangle</option>
+    </select>
+  </label>
+
+  <button
+    (click)="toggleOscillator()"
+    class="w-full bg-blue-500 hover:bg-blue-600 p-2 rounded"
+  >
+    {{ isPlaying ? 'Stop' : 'Start' }}
+  </button>
+</div>

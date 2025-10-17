@@ -1,0 +1,40 @@
+┌─────────────────────────────┐
+│        AppComponent         │
+│  (layout / container        │
+│     / Tailwind)             │
+└─────────────┬───────────────┘
+              │
+              ▼
+   ┌────────────────────────┐
+   │    AudioEngineService  │
+   │------------------------│
+   │ - Tone.js / WebAudio   │
+   │ - Synths & Instruments │
+   │ - Transport / BPM      │
+   │ - Loops / Sequencer    │
+   │ - Effects / Mixer      │
+   │ - Observables for UI   │
+   └───────┬────────────────┘
+           │
+           │ emits state via Observables
+           │
+           ▼
+┌──────────┴───────────┐
+│      Components      │
+│----------------------│
+│  Transport           │
+│  - Play / Stop       │
+│  - Tempo display     │
+│----------------------│
+│  Sequencer           │
+│  - Step grid         │
+│  - Trigger notes     │
+│----------------------│
+│  Synth Panel         │
+│  - Knobs / Sliders   │
+│  - Waveform / Filter │
+│----------------------│
+│  Mixer / Effects     │
+│  - Track volumes     │
+│  - Reverb / Delay    │
+└──────────────────────┘
