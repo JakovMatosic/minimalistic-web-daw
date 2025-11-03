@@ -30,6 +30,10 @@
 .note-container {
   position: absolute;
   pointer-events: none;
+  /* Fix: ensure notes do not overflow the grid area */
+  box-sizing: border-box;
+  overflow: hidden;
+  max-height: 100%;
 }
 
 .note {

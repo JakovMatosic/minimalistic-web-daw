@@ -33,13 +33,22 @@ export class PianoRoll {
   startStep: number | null = null;
   selectedNote: Note | null = null;
 
-  noteHeight = 'calc(100% / ' + (12 * 3) + ')';
+  noteHeight = '';
 
-  constructor() {
-    // Generate pitches from C5 down to C3
-    for (let octave = 5; octave >= 3; octave--) {
+  // Add properties for dynamic octave range
+  minOctave = 4;
+  maxOctave = 5;
+
+  updatePitches() {
+    this.pitches = [];
+    for (let octave = this.maxOctave; octave >= this.minOctave; octave--) {
       this.octaves.forEach(note => this.pitches.push(`${note}${octave}`));
     }
+    this.noteHeight = `calc(100% / ${this.pitches.length})`;
+  }
+
+  constructor() {
+    this.updatePitches();
   }
 
   get gridCells() {
@@ -165,7 +174,8 @@ export class PianoRoll {
 
   getNoteTop(pitch: string): string {
     const index = this.pitches.indexOf(pitch);
-    return `${(index / this.pitches.length) * 100}%`;
+    // Use (index + 0.0) to align the note to the top of the row, and subtract noteHeight to avoid overflow
+    return `calc(${(index / this.pitches.length) * 100}% )`;
   }
 
   getNoteLeft(start: number): string {
