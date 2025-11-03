@@ -1,0 +1,103 @@
+.piano-roll {
+  height: 500px;
+  user-select: none;
+}
+
+.keys {
+  width: 60px;
+}
+
+.grid-area {
+  position: relative;
+  flex: 1;
+}
+
+.grid, .quarter-grid {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+}
+
+.cell {
+  border: 1px solid rgba(75, 85, 99, 0.4);
+}
+
+.quarter-cell {
+  border-right: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.note-container {
+  position: absolute;
+  pointer-events: none;
+}
+
+.note {
+  pointer-events: auto;
+  height: 100%;
+  cursor: pointer;
+  z-index: 5;
+  transition: opacity 0.1s;
+}
+
+.note:hover {
+  opacity: 1;
+}
+
+.note-selected {
+  border: 2px solid white;
+  box-shadow: 0 0 4px white;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: ew-resize;
+}
+
+.resize-handle:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.resize-handle-left {
+  left: 0;
+}
+
+.resize-handle-right {
+  right: 0;
+}
+
+/* Remove double top line */
+.cell:first-child,
+.quarter-cell:first-child {
+  border-top: none;
+}
+
+/* Prevent top double border overlap */
+.cell {
+  border-top: none;
+}
+
+.quarter-cell {
+  border-top: none;
+}
+
+.quarter-grid {
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.grid {
+  z-index: 3;
+}
+
+.quarter-cell {
+  transition: background 0.1s;
+}
+
+.quarter-cell:hover {
+  background: rgba(75, 85, 99, 0.7);
+}

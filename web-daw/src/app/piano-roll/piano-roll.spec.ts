@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Oscillator } from './oscillator';
+import { PianoRoll } from './piano-roll';
 
-describe('Oscillator', () => {
-  let component: Oscillator;
-  let fixture: ComponentFixture<Oscillator>;
+describe('PianoRoll', () => {
+  let component: PianoRoll;
+  let fixture: ComponentFixture<PianoRoll>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Oscillator]
+      imports: [PianoRoll]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Oscillator);
+    fixture = TestBed.createComponent(PianoRoll);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
