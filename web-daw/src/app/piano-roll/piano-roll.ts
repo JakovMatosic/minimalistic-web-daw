@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Note {
@@ -19,11 +19,11 @@ interface Track {
   styleUrls: ['./piano-roll.css']
 })
 export class PianoRoll {
+  @Input() track!: Track;
   octaves = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   pitches: string[] = [];
   totalSteps = 16;
   quarterSteps = 64;
-  track: Track = { notes: [] };
 
   isDrawing = false;
   isResizing = false;

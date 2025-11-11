@@ -1,0 +1,48 @@
+<div class="song-container p-4 bg-gray-950 text-gray-200 min-h-screen">
+  <div class="controls flex gap-4 mb-4 items-center">
+    <label>
+      Instrument:
+      <select
+        [value]="currentInstrumentId"
+        (change)="handleInstrumentChange($event)"
+        class="bg-gray-800 border border-gray-700 p-1 rounded"
+      >
+        <option *ngFor="let inst of instruments" [value]="inst.id">
+          {{ inst.name }}
+        </option>
+      </select>
+    </label>
+
+    <label>
+      Pattern:
+      <select
+        [value]="currentPatternId"
+        (change)="handlePatternChange($event)"
+        class="bg-gray-800 border border-gray-700 p-1 rounded"
+      >
+        <option *ngFor="let p of currentInstrument.patterns" [value]="p.id">
+          {{ p.name }}
+        </option>
+      </select>
+    </label>
+
+    <button
+      class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-sm"
+      (click)="addPattern()"
+    >
+      + New Pattern
+    </button>
+
+    <button
+      class="bg-red-700 hover:bg-red-600 px-2 py-1 rounded text-sm"
+      (click)="deleteCurrentPattern()"
+    >
+      🗑 Delete Pattern
+    </button>
+  </div>
+
+  <app-piano-roll
+    [track]="currentPattern.track"
+    (ngModelChange)="saveToStorage()"
+  ></app-piano-roll>
+</div>

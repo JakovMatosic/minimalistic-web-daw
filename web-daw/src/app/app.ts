@@ -1,11 +1,11 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { PianoRoll } from './piano-roll/piano-roll';
+import { Song  } from './song/song';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, PianoRoll], // import your child component
+  imports: [RouterOutlet, Song], // import your child component
   templateUrl: './app.html',
   styleUrls: ['./app.css'],
 })
