@@ -1,0 +1,56 @@
+<div class="instrument-settings-bar mt-8 overflow-x-auto">
+  <div class="flex gap-6 min-w-max px-2 py-4">
+    <div
+      *ngFor="let inst of instruments"
+      class="instrument-settings bg-gray-900 rounded p-4 flex flex-col items-center min-w-[220px] shadow"
+    >
+      <div class="font-semibold mb-2">{{ inst.name }}</div>
+      <label class="flex flex-col items-center mb-2 w-full">
+        <span class="text-xs mb-1">Volume</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [(ngModel)]="inst.volume"
+          class="w-full"
+        />
+      </label>
+      <label *ngIf="inst.type === 'synth'" class="flex flex-col items-center mb-2 w-full">
+        <span class="text-xs mb-1">Detune</span>
+        <input
+          type="range"
+          min="-100"
+          max="100"
+          [(ngModel)]="inst.detune"
+          class="w-full"
+        />
+      </label>
+      <label *ngIf="inst.type === 'drum'" class="flex flex-col items-center mb-2 w-full">
+        <span class="text-xs mb-1">Decay</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [(ngModel)]="inst.decay"
+          class="w-full"
+        />
+      </label>
+      <label class="flex flex-col items-center mb-2 w-full">
+        <span class="text-xs mb-1">Reverb</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          [(ngModel)]="inst.reverb"
+          class="w-full"
+        />
+      </label>
+      <button
+        class="bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded text-sm mt-2"
+        (click)="handleOpenSettings(inst)"
+      >
+        ⚙️ More Settings
+      </button>
+    </div>
+  </div>
+</div>

@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // <-- Add this import
 import { PianoRoll } from '../piano-roll/piano-roll';
+import { InstrumentSettingsBar } from '../instrument-settings-bar/instrument-settings-bar';
 
 interface Note {
   pitch: string;
@@ -25,7 +26,7 @@ interface Instrument {
 @Component({
   selector: 'app-song',
   standalone: true,
-  imports: [CommonModule, FormsModule, PianoRoll], // <-- Add FormsModule here
+  imports: [CommonModule, FormsModule, PianoRoll, InstrumentSettingsBar],
   templateUrl: './song.html',
   styleUrls: ['./song.css']
 })
@@ -55,6 +56,8 @@ export class Song {
   currentPatternId = 'p1';
   newInstrumentType = 'synth';
   showInstrumentPopup = false;
+  showInstrumentSettingsPopup = false;
+  selectedInstrument: Instrument | null = null;
 
   constructor() {
     this.loadFromStorage();
@@ -132,6 +135,11 @@ export class Song {
     this.currentInstrumentId = id;
     this.currentPatternId = 'p1';
     this.saveToStorage();
+  }
+
+  openInstrumentSettings(inst: Instrument) {
+    this.selectedInstrument = inst;
+    this.showInstrumentSettingsPopup = true;
   }
 
   // --- Persistence ---

@@ -2,47 +2,31 @@
   <div class="controls flex gap-4 mb-4 items-center">
     <label>
       Instrument:
-      <select
-        [value]="currentInstrumentId"
-        (change)="handleInstrumentChange($event)"
-        class="bg-gray-800 border border-gray-700 p-1 rounded"
-      >
+      <select [value]="currentInstrumentId" (change)="handleInstrumentChange($event)"
+        class="bg-gray-800 border border-gray-700 p-1 rounded">
         <option *ngFor="let inst of instruments" [value]="inst.id">
           {{ inst.name }}
         </option>
       </select>
     </label>
 
-    <button
-      class="bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded text-sm"
-      (click)="showInstrumentPopup = true"
-    >
+    <button class="bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded text-sm" (click)="showInstrumentPopup = true">
       + Add Instrument
     </button>
 
     <!-- Instrument Type Popup -->
-    <div
-      *ngIf="showInstrumentPopup"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
+    <div *ngIf="showInstrumentPopup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-gray-900 p-6 rounded shadow-lg flex flex-col gap-4 min-w-[220px]">
         <div class="text-lg font-semibold mb-2">Choose Instrument Type</div>
-        <button
-          class="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded text-white"
-          (click)="addInstrument('synth'); showInstrumentPopup = false"
-        >
+        <button class="bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded text-white"
+          (click)="addInstrument('synth'); showInstrumentPopup = false">
           Synth
         </button>
-        <button
-          class="bg-yellow-600 hover:bg-yellow-500 px-3 py-2 rounded text-white"
-          (click)="addInstrument('drum'); showInstrumentPopup = false"
-        >
+        <button class="bg-yellow-600 hover:bg-yellow-500 px-3 py-2 rounded text-white"
+          (click)="addInstrument('drum'); showInstrumentPopup = false">
           Drum
         </button>
-        <button
-          class="mt-2 text-gray-400 hover:text-gray-200"
-          (click)="showInstrumentPopup = false"
-        >
+        <button class="mt-2 text-gray-400 hover:text-gray-200" (click)="showInstrumentPopup = false">
           Cancel
         </button>
       </div>
@@ -50,34 +34,27 @@
 
     <label>
       Pattern:
-      <select
-        [value]="currentPatternId"
-        (change)="handlePatternChange($event)"
-        class="bg-gray-800 border border-gray-700 p-1 rounded"
-      >
+      <select [value]="currentPatternId" (change)="handlePatternChange($event)"
+        class="bg-gray-800 border border-gray-700 p-1 rounded">
         <option *ngFor="let p of currentInstrument.patterns" [value]="p.id">
           {{ p.name }}
         </option>
       </select>
     </label>
 
-    <button
-      class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-sm"
-      (click)="addPattern()"
-    >
+    <button class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-sm" (click)="addPattern()">
       + New Pattern
     </button>
 
-    <button
-      class="bg-red-700 hover:bg-red-600 px-2 py-1 rounded text-sm"
-      (click)="deleteCurrentPattern()"
-    >
+    <button class="bg-red-700 hover:bg-red-600 px-2 py-1 rounded text-sm" (click)="deleteCurrentPattern()">
       🗑 Delete Pattern
     </button>
   </div>
 
-  <app-piano-roll
-    [track]="currentPattern.track"
-    (ngModelChange)="saveToStorage()"
-  ></app-piano-roll>
+
+
+  <app-piano-roll [track]="currentPattern.track" (ngModelChange)="saveToStorage()"></app-piano-roll>
+
+  <app-instrument-settings-bar [instruments]="instruments"
+    (openSettings)="openInstrumentSettings($event)"></app-instrument-settings-bar>
 </div>
