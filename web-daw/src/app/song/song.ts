@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // <-- Add this import
 import { PianoRoll } from '../piano-roll/piano-roll';
 
 interface Note {
@@ -17,13 +18,14 @@ interface Pattern {
 interface Instrument {
   id: string;
   name: string;
+  type?: string;
   patterns: Pattern[];
 }
 
 @Component({
   selector: 'app-song',
   standalone: true,
-  imports: [CommonModule, PianoRoll],
+  imports: [CommonModule, FormsModule, PianoRoll], // <-- Add FormsModule here
   templateUrl: './song.html',
   styleUrls: ['./song.css']
 })
@@ -32,24 +34,27 @@ export class Song {
 
   instruments: Instrument[] = [
     {
-      id: 'piano',
-      name: 'Piano',
+      id: 'synth-1',
+      name: 'Synth 1',
+      type: 'synth',
       patterns: [
-        { id: 'p1', name: 'Pattern 1', track: { notes: [] } },
-        { id: 'p2', name: 'Pattern 2', track: { notes: [] } }
+        { id: 'p1', name: 'Pattern 1', track: { notes: [] } }
       ]
     },
     {
-      id: 'drums',
-      name: 'Drums',
+      id: 'drum-1',
+      name: 'Drum 1',
+      type: 'drum',
       patterns: [
         { id: 'p1', name: 'Beat 1', track: { notes: [] } }
       ]
     }
   ];
 
-  currentInstrumentId = 'piano';
+  currentInstrumentId = 'synth-1';
   currentPatternId = 'p1';
+  newInstrumentType = 'synth';
+  showInstrumentPopup = false;
 
   constructor() {
     this.loadFromStorage();
@@ -104,6 +109,28 @@ export class Song {
 
     instrument.patterns = instrument.patterns.filter(p => p.id !== this.currentPatternId);
     this.currentPatternId = instrument.patterns[0].id;
+    this.saveToStorage();
+  }
+
+  // --- Instrument management ---
+  addInstrument(type: string) {
+    const count = this.instruments.filter(i => i.type === type).length + 1;
+    const id = `${type}-${count}`;
+    const name = `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`;
+    const defaultPattern: Pattern = {
+      id: 'p1',
+      name: type === 'drum' ? 'Beat 1' : 'Pattern 1',
+      track: { notes: [] }
+    };
+    const newInstrument: Instrument = {
+      id,
+      name,
+      type,
+      patterns: [defaultPattern]
+    };
+    this.instruments.push(newInstrument);
+    this.currentInstrumentId = id;
+    this.currentPatternId = 'p1';
     this.saveToStorage();
   }
 
