@@ -5,6 +5,20 @@
 
 .keys {
   width: 60px;
+  display: grid;
+  height: 100%;
+  row-gap: 0;
+}
+
+.key {
+  border: 1px solid rgb(55, 65, 79);
+  border-top: none;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.key:first-child {
+  border-top: 1px solid rgb(55, 65, 79);
 }
 
 .grid-area {
@@ -17,14 +31,20 @@
   width: 100%;
   height: 100%;
   position: absolute;
+  row-gap: 0;
+  column-gap: 0;
 }
 
 .cell {
   border: 1px solid rgba(75, 85, 99, 0.4);
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .quarter-cell {
   border-right: 1px solid rgba(55, 65, 81, 0.5);
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .note-container {

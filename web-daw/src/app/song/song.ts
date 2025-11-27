@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // <-- Add this import
 import { PianoRoll } from '../piano-roll/piano-roll';
 import { InstrumentSettingsBar } from '../instrument-settings-bar/instrument-settings-bar';
+import { AudioEngine } from '../audio/audio-engine';
 
 interface Note {
   pitch: string;
@@ -59,7 +60,16 @@ export class Song {
   showInstrumentSettingsPopup = false;
   selectedInstrument: Instrument | null = null;
 
-  constructor() {
+  // playback
+  bpm = 120;
+  isPlaying = false;
+  private stopTimer: any = null;
+
+  // Piano roll octave range
+  pianoRollMinOctave = 4;
+  pianoRollMaxOctave = 5;
+
+  constructor(private audio: AudioEngine) {
     this.loadFromStorage();
   }
 
@@ -142,6 +152,51 @@ export class Song {
     this.showInstrumentSettingsPopup = true;
   }
 
+  // --- Playback control ---
+  async togglePlay() {
+    if (this.isPlaying) {
+      this.stop();
+    } else {
+      await this.play();
+    }
+  }
+
+  async play() {
+    await this.audio.ensureStarted();
+    this.audio.stopAll();
+
+    const now = this.audio.now();
+    const stepDuration = 60 / this.bpm / 4; // 16 steps == 4 beats => step = quarter/4
+
+    let latest = 0;
+    this.instruments.forEach(inst => {
+      const pattern = inst.patterns[0];
+      if (!pattern) return;
+      (pattern.track.notes || []).forEach(n => {
+        const when = n.start * stepDuration;
+        const dur = Math.max(0.02, n.duration * stepDuration);
+        const vol = (inst as any).volume ? (inst as any).volume / 100 : 0.8;
+        this.audio.playNote(n.pitch, when, dur, vol);
+        latest = Math.max(latest, when + dur);
+      });
+    });
+
+    this.isPlaying = true;
+    this.stopTimer = setTimeout(() => {
+      this.isPlaying = false;
+      this.stopTimer = null;
+    }, (latest + 0.2) * 1000);
+  }
+
+  stop() {
+    this.audio.stopAll();
+    if (this.stopTimer) {
+      clearTimeout(this.stopTimer);
+      this.stopTimer = null;
+    }
+    this.isPlaying = false;
+  }
+
   // --- Persistence ---
   saveToStorage() {
     const data = {
@@ -164,5 +219,13 @@ export class Song {
     } catch (e) {
       console.error('Failed to load song data:', e);
     }
+  }
+
+  updatePianoRollOctaves() {
+    if (this.pianoRollMinOctave >= this.pianoRollMaxOctave) {
+      alert('Min octave must be less than max octave');
+      this.pianoRollMinOctave = this.pianoRollMaxOctave - 1;
+    }
+    this.saveToStorage();
   }
 }

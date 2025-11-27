@@ -1,4 +1,4 @@
-import { Component, HostListener, Input } from '@angular/core';
+import { Component, HostListener, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Note {
@@ -18,8 +18,11 @@ interface Track {
   templateUrl: './piano-roll.html',
   styleUrls: ['./piano-roll.css']
 })
-export class PianoRoll {
+export class PianoRoll implements OnInit, OnChanges {
   @Input() track!: Track;
+  @Input() minOctave = 4;
+  @Input() maxOctave = 5;
+
   octaves = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   pitches: string[] = [];
   totalSteps = 16;
@@ -35,20 +38,24 @@ export class PianoRoll {
 
   noteHeight = '';
 
-  // Add properties for dynamic octave range
-  minOctave = 4;
-  maxOctave = 5;
-
   updatePitches() {
     this.pitches = [];
     for (let octave = this.maxOctave; octave >= this.minOctave; octave--) {
-      this.octaves.forEach(note => this.pitches.push(`${note}${octave}`));
+      for (let i = this.octaves.length - 1; i >= 0; i--) {
+        this.pitches.push(`${this.octaves[i]}${octave}`);
+      }
     }
     this.noteHeight = `calc(100% / ${this.pitches.length})`;
   }
 
-  constructor() {
+  ngOnInit() {
     this.updatePitches();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['minOctave'] || changes['maxOctave']) {
+      this.updatePitches();
+    }
   }
 
   get gridCells() {
@@ -172,10 +179,14 @@ export class PianoRoll {
     }
   }
 
+  isNoteVisible(note: Note): boolean {
+    return this.pitches.includes(note.pitch);
+  }
+
   getNoteTop(pitch: string): string {
     const index = this.pitches.indexOf(pitch);
-    // Use (index + 0.0) to align the note to the top of the row, and subtract noteHeight to avoid overflow
-    return `calc(${(index / this.pitches.length) * 100}% )`;
+    if (index === -1) return '0%';
+    return `${(index / this.pitches.length) * 100}%`;
   }
 
   getNoteLeft(start: number): string {

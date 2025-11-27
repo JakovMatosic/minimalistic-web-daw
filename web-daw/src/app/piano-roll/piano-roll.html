@@ -1,8 +1,9 @@
 <div class="piano-roll flex select-none">
   <!-- Piano keys -->
-  <div class="keys flex flex-col border-r border-gray-700 bg-gray-800">
+  <div class="keys border-r border-gray-700 bg-gray-800"
+       [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
     <div *ngFor="let pitch of pitches" 
-         class="key h-6 flex items-center justify-end pr-2 text-xs text-gray-300 border-b border-gray-700">
+         class="key flex items-center justify-end pr-2 text-xs text-gray-300">
       {{ pitch }}
     </div>
   </div>
@@ -34,20 +35,22 @@
     </div>
 
     <!-- Render notes -->
-    <div *ngFor="let note of track.notes"
-         class="note-container absolute"
-         [ngStyle]="{
-           top: getNoteTop(note.pitch),
-           left: getNoteLeft(note.start),
-           width: getNoteWidth(note.duration),
-           height: noteHeight
-         }">
-      <div class="note bg-blue-400 rounded-sm opacity-90 relative h-full"
-           [class.note-selected]="selectedNote === note"
-           (mousedown)="handleNoteMouseDown($event, note)">
-        <div class="resize-handle resize-handle-left"></div>
-        <div class="resize-handle resize-handle-right"></div>
+    <ng-container *ngFor="let note of track.notes">
+      <div *ngIf="isNoteVisible(note)"
+           class="note-container absolute"
+           [ngStyle]="{
+             top: getNoteTop(note.pitch),
+             left: getNoteLeft(note.start),
+             width: getNoteWidth(note.duration),
+             height: noteHeight
+           }">
+        <div class="note bg-blue-400 rounded-sm opacity-90 relative h-full"
+             [class.note-selected]="selectedNote === note"
+             (mousedown)="handleNoteMouseDown($event, note)">
+          <div class="resize-handle resize-handle-left"></div>
+          <div class="resize-handle resize-handle-right"></div>
+        </div>
       </div>
-    </div>
+    </ng-container>
   </div>
 </div>
