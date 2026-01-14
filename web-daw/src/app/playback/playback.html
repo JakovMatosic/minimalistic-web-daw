@@ -1,0 +1,18 @@
+<div class="playback-container p-4 bg-gray-900 border-t border-gray-700 flex gap-4 items-center">
+  <label class="flex items-center gap-2">
+    BPM:
+    <input 
+      type="number" 
+      [(ngModel)]="bpm" 
+      (change)="onBpmChange()"
+      class="bg-gray-800 border border-gray-700 p-1 rounded w-20"
+      min="20"
+      max="300">
+  </label>
+
+  <button 
+    class="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded text-sm font-semibold"
+    (click)="onTogglePlay()">
+    {{ isPlaying ? '⏹ Stop' : '▶️ Play' }}
+  </button>
+</div>

@@ -1,0 +1,29 @@
+.playback-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+input {
+  transition: all 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+button {
+  transition: all 0.2s;
+}
+
+button:active {
+  transform: scale(0.98);
+}

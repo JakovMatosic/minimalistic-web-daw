@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // <-- Add this import
 import { PianoRoll } from '../piano-roll/piano-roll';
 import { InstrumentSettingsBar } from '../instrument-settings-bar/instrument-settings-bar';
+import { Playback } from '../playback/playback';
 import { AudioEngine } from '../audio/audio-engine';
 
 interface Note {
@@ -29,7 +30,7 @@ interface Instrument {
 @Component({
   selector: 'app-song',
   standalone: true,
-  imports: [CommonModule, FormsModule, PianoRoll, InstrumentSettingsBar],
+  imports: [CommonModule, FormsModule, PianoRoll, InstrumentSettingsBar, Playback],
   templateUrl: './song.html',
   styleUrls: ['./song.css']
 })
