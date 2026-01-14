@@ -56,9 +56,9 @@
 
     <label>
       Pattern:
-      <select [value]="currentPatternId" (change)="handlePatternChange($event)"
+      <select [(ngModel)]="currentPatternId" (change)="handlePatternChange($event)"
         class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let p of currentInstrument.patterns" [value]="p.id">
+        <option *ngFor="let p of currentInstrument.patterns; trackBy: trackByPatternId" [value]="p.id">
           {{ p.name }}
         </option>
       </select>

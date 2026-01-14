@@ -96,6 +96,10 @@ export class Song {
     this.saveToStorage();
   }
 
+  trackByPatternId(index: number, pattern: Pattern) {
+    return pattern.id;
+  }
+
   // --- Pattern management ---
   addPattern() {
     const name = prompt('Enter new pattern name:');
@@ -112,16 +116,25 @@ export class Song {
   deleteCurrentPattern() {
     const instrument = this.currentInstrument;
 
-    if (instrument.patterns.length <= 1) {
-      alert('You must keep at least one pattern.');
-      return;
-    }
-
     const confirmDelete = confirm(`Delete pattern "${this.currentPattern.name}"?`);
     if (!confirmDelete) return;
 
+    // Remove the pattern
     instrument.patterns = instrument.patterns.filter(p => p.id !== this.currentPatternId);
-    this.currentPatternId = instrument.patterns[0].id;
+
+    // If no patterns left, create a new one called "Pattern 1"
+    if (instrument.patterns.length === 0) {
+      const newPattern: Pattern = {
+        id: `p${Date.now()}`,
+        name: 'Pattern 1',
+        track: { notes: [] }
+      };
+      instrument.patterns.push(newPattern);
+      this.currentPatternId = newPattern.id;
+    } else {
+      this.currentPatternId = instrument.patterns[0].id;
+    }
+
     this.saveToStorage();
   }
 
