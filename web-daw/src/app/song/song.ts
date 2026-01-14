@@ -15,6 +15,8 @@ interface Pattern {
   id: string;
   name: string;
   track: { notes: Note[] };
+  minOctave: number;
+  maxOctave: number;
 }
 
 interface Instrument {
@@ -40,7 +42,7 @@ export class Song {
       name: 'Synth 1',
       type: 'synth',
       patterns: [
-        { id: 'p1', name: 'Pattern 1', track: { notes: [] } }
+        { id: 'p1', name: 'Pattern 1', track: { notes: [] }, minOctave: 4, maxOctave: 5 }
       ]
     },
     {
@@ -48,7 +50,7 @@ export class Song {
       name: 'Drum 1',
       type: 'drum',
       patterns: [
-        { id: 'p1', name: 'Beat 1', track: { notes: [] } }
+        { id: 'p1', name: 'Beat 1', track: { notes: [] }, minOctave: 4, maxOctave: 5 }
       ]
     }
   ];
@@ -93,6 +95,9 @@ export class Song {
   handlePatternChange(event: Event) {
     const select = event.target as HTMLSelectElement;
     this.currentPatternId = select.value;
+    const pattern = this.currentPattern;
+    this.pianoRollMinOctave = pattern.minOctave;
+    this.pianoRollMaxOctave = pattern.maxOctave;
     this.saveToStorage();
   }
 
@@ -106,10 +111,12 @@ export class Song {
     if (!name) return;
 
     const id = `p${Date.now()}`;
-    const newPattern: Pattern = { id, name, track: { notes: [] } };
+    const newPattern: Pattern = { id, name, track: { notes: [] }, minOctave: 4, maxOctave: 5 };
 
     this.currentInstrument.patterns.push(newPattern);
     this.currentPatternId = id;
+    this.pianoRollMinOctave = newPattern.minOctave;
+    this.pianoRollMaxOctave = newPattern.maxOctave;
     this.saveToStorage();
   }
 
@@ -127,12 +134,19 @@ export class Song {
       const newPattern: Pattern = {
         id: `p${Date.now()}`,
         name: 'Pattern 1',
-        track: { notes: [] }
+        track: { notes: [] },
+        minOctave: 4,
+        maxOctave: 5
       };
       instrument.patterns.push(newPattern);
       this.currentPatternId = newPattern.id;
+      this.pianoRollMinOctave = newPattern.minOctave;
+      this.pianoRollMaxOctave = newPattern.maxOctave;
     } else {
       this.currentPatternId = instrument.patterns[0].id;
+      const pattern = this.currentPattern;
+      this.pianoRollMinOctave = pattern.minOctave;
+      this.pianoRollMaxOctave = pattern.maxOctave;
     }
 
     this.saveToStorage();
@@ -146,7 +160,9 @@ export class Song {
     const defaultPattern: Pattern = {
       id: 'p1',
       name: type === 'drum' ? 'Beat 1' : 'Pattern 1',
-      track: { notes: [] }
+      track: { notes: [] },
+      minOctave: 4,
+      maxOctave: 5
     };
     const newInstrument: Instrument = {
       id,
@@ -239,6 +255,9 @@ export class Song {
       alert('Min octave must be less than max octave');
       this.pianoRollMinOctave = this.pianoRollMaxOctave - 1;
     }
+    // Save octaves to current pattern
+    this.currentPattern.minOctave = this.pianoRollMinOctave;
+    this.currentPattern.maxOctave = this.pianoRollMaxOctave;
     this.saveToStorage();
   }
 }
