@@ -1,18 +1,112 @@
-<div class="playback-container p-4 bg-gray-900 border-t border-gray-700 flex gap-4 items-center">
-  <label class="flex items-center gap-2">
-    BPM:
-    <input 
-      type="number" 
-      [(ngModel)]="bpm" 
-      (change)="onBpmChange()"
-      class="bg-gray-800 border border-gray-700 p-1 rounded w-20"
-      min="20"
-      max="300">
-  </label>
+<div class="playback-container p-4 bg-gray-900 border-t border-gray-700">
+  <!-- Playback Controls -->
+  <div class="playback-controls flex gap-4 items-center mb-6">
+    <label class="flex items-center gap-2">
+      BPM:
+      <input 
+        type="number" 
+        [(ngModel)]="bpm" 
+        (change)="onBpmChange()"
+        class="bg-gray-800 border border-gray-700 p-1 rounded w-20"
+        min="20"
+        max="300">
+    </label>
 
-  <button 
-    class="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded text-sm font-semibold"
-    (click)="onTogglePlay()">
-    {{ isPlaying ? '⏹ Stop' : '▶️ Play' }}
-  </button>
+    <button 
+      class="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded text-sm font-semibold"
+      (click)="onTogglePlay()">
+      {{ isPlaying ? '⏹ Stop' : '▶️ Play' }}
+    </button>
+  </div>
+
+  <!-- Sequencer -->
+  <div class="sequencer-section" *ngIf="instruments.length > 0">
+    <h3 class="text-lg font-semibold mb-3">Pattern Sequencer</h3>
+    
+    <div class="sequencer-controls flex gap-2 mb-3">
+      <button 
+        class="bg-green-700 hover:bg-green-600 px-2 py-1 rounded text-sm"
+        (click)="addSequenceStep()">
+        + Add Step
+      </button>
+      <button 
+        class="bg-red-700 hover:bg-red-600 px-2 py-1 rounded text-sm"
+        (click)="removeSequenceStep()">
+        - Remove Step
+      </button>
+      <span class="text-gray-400 text-sm ml-2">Steps: {{ sequenceLength }}</span>
+    </div>
+
+    <!-- Sequencer Grid -->
+    <div class="sequencer-grid overflow-x-auto">
+      <div class="grid-wrapper">
+        <!-- Instrument Labels Column -->
+        <div class="instruments-column">
+          <div class="grid-header-cell"></div>
+          <div class="instrument-row" *ngFor="let inst of instruments">
+            <div class="instrument-label">{{ inst.name }}</div>
+          </div>
+        </div>
+
+        <!-- Pattern Grid -->
+        <div class="patterns-grid">
+          <!-- Step Headers -->
+          <div class="grid-header-row">
+            <div class="step-header" *ngFor="let i of [].constructor(sequenceLength); let step = index">
+              Step {{ step + 1 }}
+            </div>
+          </div>
+
+          <!-- Sequence Cells -->
+          <div class="instrument-row" *ngFor="let inst of instruments; let instIdx = index">
+            <div class="step-cell" *ngFor="let step of [].constructor(sequenceLength); let stepIdx = index">
+              <!-- Patterns in this cell -->
+              <div class="patterns-in-cell">
+                <div class="pattern-item" *ngFor="let item of sequence[stepIdx]; let itemIdx = index">
+                  <div class="pattern-content" *ngIf="item.instrumentId === inst.id">
+                    <select 
+                      [(ngModel)]="item.patternId" 
+                      (change)="changePatternInSequence(stepIdx, itemIdx, item.patternId)"
+                      class="pattern-select">
+                      <option *ngFor="let p of getInstrumentPatterns(inst.id)" [value]="p.id">
+                        {{ p.name }}
+                      </option>
+                    </select>
+                    <button 
+                      class="remove-btn"
+                      (click)="removePatternFromSequence(stepIdx, itemIdx)">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Add Pattern Button or Dropdown -->
+              <div *ngIf="!hasPatternInStep(inst.id, stepIdx)" class="add-pattern-wrapper">
+                <button 
+                  class="add-pattern-btn"
+                  (click)="addPatternToSequence(inst.id, stepIdx)"
+                  *ngIf="openPatternSelector?.stepIndex !== stepIdx || openPatternSelector?.instrumentId !== inst.id">
+                  +
+                </button>
+
+                <!-- Pattern Selection Dropdown -->
+                <select 
+                  *ngIf="openPatternSelector?.stepIndex === stepIdx && openPatternSelector?.instrumentId === inst.id"
+                  class="pattern-selection-dropdown"
+                  (change)="onPatternSelectChange($event, inst.id, stepIdx)"
+                  (blur)="closePatternSelector()">
+                  <option value="" disabled selected>Select Pattern</option>
+                  <option *ngFor="let p of getInstrumentPatterns(inst.id)" [value]="p.id">
+                    {{ p.name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+

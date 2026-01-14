@@ -67,6 +67,7 @@ export class Song {
   bpm = 120;
   isPlaying = false;
   private stopTimer: any = null;
+  sequence: any[][] = [];  
 
   // Piano roll octave range
   pianoRollMinOctave = 4;
@@ -104,6 +105,10 @@ export class Song {
 
   trackByPatternId(index: number, pattern: Pattern) {
     return pattern.id;
+  }
+
+  onSequenceChange(newSequence: any[][]) {
+    this.sequence = newSequence;
   }
 
   // --- Pattern management ---
@@ -195,27 +200,53 @@ export class Song {
     await this.audio.ensureStarted();
     this.audio.stopAll();
 
-    const now = this.audio.now();
     const stepDuration = 60 / this.bpm / 4; // 16 steps == 4 beats => step = quarter/4
 
     let latest = 0;
-    this.instruments.forEach(inst => {
-      const pattern = inst.patterns[0];
-      if (!pattern) return;
-      (pattern.track.notes || []).forEach(n => {
-        const when = n.start * stepDuration;
-        const dur = Math.max(0.02, n.duration * stepDuration);
-        const vol = (inst as any).volume ? (inst as any).volume / 100 : 0.8;
-        this.audio.playNote(n.pitch, when, dur, vol);
-        latest = Math.max(latest, when + dur);
+
+    if (!this.sequence || this.sequence.length === 0) {
+      this.isPlaying = true;
+      this.stopTimer = setTimeout(() => {
+        this.isPlaying = false;
+        this.stopTimer = null;
+      }, 1000);
+      return;
+    }
+
+    // Play through the sequence
+    this.sequence.forEach((step, stepIndex) => {
+      const stepStartTime = stepIndex * stepDuration;
+
+      step.forEach((sequenceItem: any) => {
+        const instrument = this.instruments.find(i => i.id === sequenceItem.instrumentId);
+        const pattern = instrument?.patterns.find(p => p.id === sequenceItem.patternId);
+
+        if (!pattern) return;
+
+        (pattern.track.notes || []).forEach((n: any) => {
+          const when = stepStartTime + n.start * stepDuration;
+          const dur = Math.max(0.02, n.duration * stepDuration);
+          const vol = (instrument as any).volume ? (instrument as any).volume / 100 : 0.8;
+          this.audio.playNote(n.pitch, when, dur, vol);
+          latest = Math.max(latest, when + dur);
+        });
       });
     });
+
+    // If no notes were played, default to playing through entire sequence
+    if (latest === 0) {
+      latest = this.sequence.length * stepDuration;
+    }
+
+    // Ensure minimum 2 second playback duration
+    const minDuration = 2;
+    const playDuration = Math.max(minDuration, latest + 0.5);
 
     this.isPlaying = true;
     this.stopTimer = setTimeout(() => {
       this.isPlaying = false;
       this.stopTimer = null;
-    }, (latest + 0.2) * 1000);
+    }, playDuration * 1000);
   }
 
   stop() {

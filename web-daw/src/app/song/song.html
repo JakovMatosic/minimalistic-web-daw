@@ -83,8 +83,10 @@
   <app-playback
     [bpm]="bpm"
     [isPlaying]="isPlaying"
+    [instruments]="instruments"
     (bpmChange)="bpm = $event"
-    (togglePlay)="togglePlay()">
+    (togglePlay)="togglePlay()"
+    (sequenceChange)="onSequenceChange($event)">
   </app-playback>
 
   <app-instrument-settings-bar [instruments]="instruments"
