@@ -213,7 +213,11 @@ export class Song {
     await this.audio.ensureStarted();
     this.audio.stopAll();
 
-    const stepDuration = 60 / this.bpm / 4; // 16 steps == 4 beats => step = quarter/4
+    // Duration of one 16th-note
+    const noteStepDuration = 60 / this.bpm / 4;
+    // 16 bars of 4 notes
+    const PATTERN_NOTES = 16*4;
+    const patternStepDuration = noteStepDuration * PATTERN_NOTES;
 
     let latest = 0;
 
@@ -226,34 +230,33 @@ export class Song {
       return;
     }
 
-    // Play through the sequence
-    this.sequence.forEach((step, stepIndex) => {
-      const stepStartTime = stepIndex * stepDuration;
+    // Play through the sequence (each "step" = one pattern)
+    this.sequence.forEach((sequenceStep, seqStepIndex) => {
+      const stepStartTime = seqStepIndex * patternStepDuration;
 
-      step.forEach((sequenceItem: any) => {
+      sequenceStep.forEach((sequenceItem: any) => {
         const instrument = this.instruments.find(i => i.id === sequenceItem.instrumentId);
         const pattern = instrument?.patterns.find(p => p.id === sequenceItem.patternId);
-
         if (!pattern) return;
 
+        // Schedule each note
         (pattern.track.notes || []).forEach((n: any) => {
-          const when = stepStartTime + n.start * stepDuration;
-          const dur = Math.max(0.02, n.duration * stepDuration);
+          const when = stepStartTime + n.start * noteStepDuration;
+          const dur = Math.max(0.02, n.duration * noteStepDuration);
           const vol = (instrument as any).volume ? (instrument as any).volume / 100 : 0.8;
+
           this.audio.playNote(n.pitch, when, dur, vol);
           latest = Math.max(latest, when + dur);
         });
       });
     });
 
-    // If no notes were played, default to playing through entire sequence
+    // If no notes were scheduled, assume full length of sequence
     if (latest === 0) {
-      latest = this.sequence.length * stepDuration;
+      latest = this.sequence.length * patternStepDuration;
     }
 
-    // Ensure minimum 2 second playback duration
-    const minDuration = 2;
-    const playDuration = Math.max(minDuration, latest + 0.5);
+    const playDuration = Math.max(2, latest + 0.5);
 
     this.isPlaying = true;
     this.stopTimer = setTimeout(() => {
@@ -261,6 +264,7 @@ export class Song {
       this.stopTimer = null;
     }, playDuration * 1000);
   }
+
 
   stop() {
     this.audio.stopAll();
