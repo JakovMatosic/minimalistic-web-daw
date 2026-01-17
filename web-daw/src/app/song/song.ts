@@ -67,7 +67,7 @@ export class Song {
   bpm = 120;
   isPlaying = false;
   private stopTimer: any = null;
-  sequence: any[][] = [];  
+  sequence: any[][] = [];
 
   // Piano roll octave range
   pianoRollMinOctave = 4;
@@ -111,6 +111,11 @@ export class Song {
   trackByPatternId(index: number, pattern: Pattern) {
     return pattern.id;
   }
+
+  trackByInstrumentId(index: number, inst: Instrument) {
+    return inst.id;
+  }
+
 
   onSequenceChange(newSequence: any[][]) {
     this.sequence = newSequence;
@@ -184,6 +189,9 @@ export class Song {
     this.instruments.push(newInstrument);
     this.currentInstrumentId = id;
     this.currentPatternId = 'p1';
+    const p = this.currentPattern;
+    this.pianoRollMinOctave = p.minOctave;
+    this.pianoRollMaxOctave = p.maxOctave;
     this.saveToStorage();
   }
 

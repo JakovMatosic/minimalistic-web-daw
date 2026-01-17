@@ -24,12 +24,13 @@
     <!-- ...existing controls... -->
     <label>
       Instrument:
-      <select [value]="currentInstrumentId" (change)="handleInstrumentChange($event)"
+      <select [(ngModel)]="currentInstrumentId" (change)="handleInstrumentChange($event)"
         class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let inst of instruments" [value]="inst.id">
+        <option *ngFor="let inst of instruments; trackBy: trackByInstrumentId" [value]="inst.id">
           {{ inst.name }}
         </option>
       </select>
+
     </label>
 
     <button class="bg-blue-700 hover:bg-blue-600 px-2 py-1 rounded text-sm" (click)="showInstrumentPopup = true">
@@ -73,20 +74,12 @@
     </button>
   </div>
 
-  <app-piano-roll 
-    [track]="currentPattern.track"
-    [minOctave]="pianoRollMinOctave"
-    [maxOctave]="pianoRollMaxOctave"
+  <app-piano-roll [track]="currentPattern.track" [minOctave]="pianoRollMinOctave" [maxOctave]="pianoRollMaxOctave"
     (ngModelChange)="saveToStorage()">
   </app-piano-roll>
 
-  <app-playback
-    [bpm]="bpm"
-    [isPlaying]="isPlaying"
-    [instruments]="instruments"
-    (bpmChange)="bpm = $event"
-    (togglePlay)="togglePlay()"
-    (sequenceChange)="onSequenceChange($event)">
+  <app-playback [bpm]="bpm" [isPlaying]="isPlaying" [instruments]="instruments" (bpmChange)="bpm = $event"
+    (togglePlay)="togglePlay()" (sequenceChange)="onSequenceChange($event)">
   </app-playback>
 
   <app-instrument-settings-bar [instruments]="instruments"
