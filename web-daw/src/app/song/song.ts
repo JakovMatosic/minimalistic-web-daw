@@ -91,6 +91,11 @@ export class Song {
     const select = event.target as HTMLSelectElement;
     this.currentInstrumentId = select.value;
     this.currentPatternId = this.currentInstrument.patterns[0].id;
+
+    const pattern = this.currentPattern;
+    this.pianoRollMinOctave = pattern.minOctave;
+    this.pianoRollMaxOctave = pattern.maxOctave;
+
     this.saveToStorage();
   }
 
