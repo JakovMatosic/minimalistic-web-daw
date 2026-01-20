@@ -85,5 +85,6 @@
   </app-playback>
 
   <app-instrument-settings-bar [instruments]="instruments"
-    (openSettings)="openInstrumentSettings($event)"></app-instrument-settings-bar>
+    (openSettings)="openInstrumentSettings($event)"
+    (settingsChange)="onInstrumentSettingsChange()"></app-instrument-settings-bar>
 </div>

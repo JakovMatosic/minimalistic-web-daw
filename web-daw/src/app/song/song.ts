@@ -155,6 +155,12 @@ export class Song {
     this.pianoRollMinOctave = p.minOctave;
     this.pianoRollMaxOctave = p.maxOctave;
 
+    // Apply initial volume to audio engine
+    if (newInstrument.volume !== undefined) {
+      const volumeNormalized = newInstrument.volume / 100;
+      this.audio.updateVolume(newInstrument.id, volumeNormalized);
+    }
+
     this.saveToStorage();
   }
 
@@ -185,6 +191,17 @@ export class Song {
   openInstrumentSettings(inst: Instrument) {
     this.selectedInstrument = inst;
     this.showInstrumentSettingsPopup = true;
+  }
+
+  onInstrumentSettingsChange() {
+    // Update audio engine volumes for all instruments
+    this.instruments.forEach(inst => {
+      if (inst.volume !== undefined) {
+        const volumeNormalized = inst.volume / 100; // Convert 0-100 to 0-1
+        this.audio.updateVolume(inst.id, volumeNormalized);
+      }
+    });
+    this.saveToStorage();
   }
 
   // --- Playback control ---
@@ -225,23 +242,23 @@ export class Song {
         const instrument = this.instruments.find(i => i.id === sequenceItem.instrumentId);
         const pattern = instrument?.patterns.find(p => p.id === sequenceItem.patternId);
         if (!pattern) return;
+        if (!instrument) return;
 
         // Schedule each note
         (pattern.track.notes || []).forEach((n: any) => {
           const when = stepStartTime + n.start * noteStepDuration;
           const dur = Math.max(0.02, n.duration * noteStepDuration);
-          const vol = (instrument as any).volume ? (instrument as any).volume / 100 : 0.8;
+          // Convert volume from 0-100 range to 0-1 range, default to 0.8 if not set
+          const vol = instrument.volume !== undefined ? instrument.volume / 100 : 0.8;
 
-          if (instrument) {
-            this.audio.playNote(
-              instrument.id,
-              instrument.type || 'synth',
-              n.pitch,
-              when,
-              dur,
-              vol
-            );
-          }
+          this.audio.playNote(
+            instrument.id,
+            instrument.type || 'synth',
+            n.pitch,
+            when,
+            dur,
+            vol
+          );
 
           latest = Math.max(latest, when + dur);
         });
@@ -284,13 +301,26 @@ export class Song {
 
   loadFromStorage() {
     const saved = localStorage.getItem(this.storageKey);
-    if (!saved) return;
+    if (!saved) {
+      // Initialize volumes for default instruments
+      this.instruments.forEach(inst => {
+        if (inst.volume === undefined) inst.volume = 80;
+      });
+      return;
+    }
 
     try {
       const data = JSON.parse(saved);
       this.instruments = data.instruments || this.instruments;
       this.currentInstrumentId = data.currentInstrumentId || 'piano';
       this.currentPatternId = data.currentPatternId || 'p1';
+
+      // Ensure all instruments have volume set and apply to audio engine
+      this.instruments.forEach(inst => {
+        if (inst.volume === undefined) inst.volume = 80;
+        const volumeNormalized = inst.volume / 100;
+        this.audio.updateVolume(inst.id, volumeNormalized);
+      });
     } catch (e) {
       console.error('Failed to load song data:', e);
     }

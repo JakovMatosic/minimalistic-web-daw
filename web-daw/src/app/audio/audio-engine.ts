@@ -97,6 +97,28 @@ export class AudioEngine {
 
 
   /**
+   * Update the volume of an existing instrument voice.
+   */
+  updateVolume(instrumentId: string, volume: number) {
+    const inst = this.instrumentVoices[instrumentId];
+    if (!inst) return;
+
+    // Handle Soundfont player - volume is set per note, so we don't need to update here
+    if ('play' in inst && typeof inst.play === 'function' && !('triggerAttackRelease' in inst)) {
+      // Soundfont volume is handled per note in playNote
+      return;
+    }
+
+    // For Tone.js synths: set volume on the synth itself
+    // Volume conversion: 0-1 range to dB
+    // 0 = -96dB (silent), 1 = 0dB (full volume)
+    const db = volume <= 0 ? -96 : Math.max(-24, (volume - 1) * 24);
+    if ((inst as any).volume) {
+      (inst as any).volume.value = db;
+    }
+  }
+
+  /**
    * Play a note with the specified instrument.
    * Adjusted to handle SoundFont players and Tone.js synths.
    */
@@ -116,15 +138,17 @@ export class AudioEngine {
     // Handle Soundfont player differently
     if ('play' in inst && typeof inst.play === 'function' && !('triggerAttackRelease' in inst)) {
       // This is a Soundfont.Player instance
-      // Soundfont player volume is controlled by gain node, but here we use simplified approach:
+      // Soundfont player volume is controlled per note via gain parameter
       inst.play(pitch, time, { duration: dur, gain: volume });
       return;
     }
 
-    // For Tone.js synths:
-    // Volume conversion to dB
-    let db = (volume <= 0) ? -96 : (Math.max(-24, (volume - 1) * 24));
-    (inst as any).volume.value = db;
+    // For Tone.js synths: set volume on the synth before playing
+    // Volume conversion: 0-1 range to dB
+    const db = volume <= 0 ? -96 : Math.max(-24, (volume - 1) * 24);
+    if ((inst as any).volume) {
+      (inst as any).volume.value = db;
+    }
 
     if ('triggerAttackRelease' in inst) {
       (inst as any).triggerAttackRelease(pitch, dur, time);
