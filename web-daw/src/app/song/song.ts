@@ -239,6 +239,12 @@ export class Song {
     const PATTERN_NOTES = 16 * 4;
     const patternStepDuration = noteStepDuration * PATTERN_NOTES;
 
+    // Get the current audio time and add a small buffer to ensure everything is ready
+    // This ensures we don't schedule notes in the past or at exactly now()
+    const currentTime = this.audio.now();
+    const bufferTime = 0.1; // 100ms buffer to ensure AudioContext is fully ready
+    const scheduleStartTime = currentTime + bufferTime;
+
     let latest = 0;
 
     if (!this.sequence || this.sequence.length === 0) {
@@ -252,7 +258,7 @@ export class Song {
 
     // Play through the sequence (each "step" = one pattern)
     this.sequence.forEach((sequenceStep, seqStepIndex) => {
-      const stepStartTime = seqStepIndex * patternStepDuration;
+      const stepStartTime = scheduleStartTime + seqStepIndex * patternStepDuration;
 
       sequenceStep.forEach((sequenceItem: any) => {
         const instrument = this.instruments.find(i => i.id === sequenceItem.instrumentId);

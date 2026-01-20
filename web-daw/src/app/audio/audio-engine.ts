@@ -49,7 +49,34 @@ export class AudioEngine {
       }
       // Tone.start() ensures the context is running
       await Tone.start();
+      
+      // Wait until AudioContext is actually running (not just resumed)
+      await this.waitForContextReady();
+      
       this.started = true;
+    }
+  }
+
+  /**
+   * Wait until AudioContext is actually running and processing audio.
+   * This is more reliable than a fixed delay.
+   */
+  private async waitForContextReady(): Promise<void> {
+    const context = Tone.getContext();
+    const audioContext = context.rawContext as AudioContext;
+    
+    // Wait until context state is 'running'
+    while (audioContext.state !== 'running') {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    
+    // Additional check: ensure the audio context is actually processing
+    // by waiting for currentTime to advance (indicating it's running)
+    const initialTime = audioContext.currentTime;
+    let attempts = 0;
+    while (audioContext.currentTime === initialTime && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+      attempts++;
     }
   }
 
@@ -108,6 +135,8 @@ export class AudioEngine {
         urls: this.drumSamples,
         baseUrl: 'assets/drums/'
       }).toDestination();
+      // Wait for sampler to load all audio files before considering it ready
+      await (inst as Tone.Sampler).loaded;
       break;
 
     case 'synth':
@@ -124,12 +153,36 @@ export class AudioEngine {
   /**
    * Pre-create all instrument voices for the given instruments.
    * This should be called before scheduling notes to avoid delays.
+   * Ensures all instruments are fully loaded and ready to play.
    */
   async preloadInstruments(instruments: Array<{ id: string; type: string }>) {
     const promises = instruments.map(inst => 
       this.getOrCreateVoice(inst.id, inst.type)
     );
     await Promise.all(promises);
+    
+    // Additional check: ensure all Samplers are fully loaded
+    // Note: We already wait for loaded in getOrCreateVoice, but this provides extra safety
+    const samplerPromises: Promise<void>[] = [];
+    for (const voice of Object.values(this.instrumentVoices)) {
+      if (voice instanceof Tone.Sampler) {
+        // loaded is a Promise in Tone.js, but TypeScript types may not reflect this
+        // Use 'unknown' first to bypass strict type checking
+        const loadedPromise = (voice as any).loaded as unknown;
+        if (loadedPromise && typeof (loadedPromise as any).then === 'function') {
+          samplerPromises.push((loadedPromise as Promise<void>).then(() => {}));
+        }
+      }
+    }
+    if (samplerPromises.length > 0) {
+      await Promise.all(samplerPromises);
+    }
+    
+    // Final verification: ensure AudioContext is still running
+    const context = Tone.getContext();
+    if (context.state !== 'running') {
+      await this.waitForContextReady();
+    }
   }
 
   /**
