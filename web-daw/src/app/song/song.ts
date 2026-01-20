@@ -7,6 +7,8 @@ import { Playback } from '../playback/playback';
 import { AudioEngine } from '../audio/audio-engine';
 import { INSTRUMENT_LABELS, InstrumentType } from '../audio/instrument-types';
 import { Instrument, Pattern, createInstrument } from '../song/instruments/instrument-config';
+import { Tone } from 'tone/build/esm/core/Tone';
+import { Frequency } from 'tone';
 
 @Component({
   selector: 'app-song',
@@ -17,6 +19,7 @@ import { Instrument, Pattern, createInstrument } from '../song/instruments/instr
 })
 export class Song {
   private storageKey = 'web-daw-song-data';
+  pitchFrequencyCache: Record<string, number> = {};
   readonly INSTRUMENT_LABELS = INSTRUMENT_LABELS;
   instrumentTypes = Object.keys(INSTRUMENT_LABELS) as InstrumentType[];
 
@@ -38,6 +41,9 @@ export class Song {
   isPlaying = false;
   private stopTimer: any = null;
   sequence: any[][] = [];
+  private hasInteracted = false;
+  isPrimed = false;
+  isPriming = false;
 
   // Piano roll octave range
   pianoRollMinOctave = 4;
@@ -45,6 +51,17 @@ export class Song {
 
   constructor(private audio: AudioEngine) {
     this.loadFromStorage();
+  }
+
+  /**
+   * Called on first user interaction to start AudioContext early.
+   */
+  onUserInteraction() {
+    if (!this.hasInteracted) {
+      this.hasInteracted = true;
+      // Just start AudioContext - priming will be done via button
+      this.audio.ensureStarted().catch(() => { });
+    }
   }
 
   // --- Getters for current instrument/pattern ---
@@ -161,6 +178,9 @@ export class Song {
       this.audio.updateVolume(newInstrument.id, volumeNormalized);
     }
 
+    // Reset primed flag - user needs to prime again after adding instrument
+    this.isPrimed = false;
+
     this.saveToStorage();
   }
 
@@ -213,25 +233,76 @@ export class Song {
     }
   }
 
-  async play() {
-    await this.audio.ensureStarted();
-    this.audio.stopAll();
+  /**
+   * Prime all instruments - do all the heavy lifting here.
+   * This should be called before play() to ensure instant playback.
+   */
+  async prime() {
+    if (this.isPriming) return;
+    this.isPriming = true;
 
-    // Pre-create all instrument voices before scheduling notes
-    // This prevents delays during playback
-    const instrumentsToPreload = this.instruments.map(inst => ({
-      id: inst.id,
-      type: inst.type || 'synth'
-    }));
-    await this.audio.preloadInstruments(instrumentsToPreload);
-    
-    // Apply volumes to all preloaded instruments
-    this.instruments.forEach(inst => {
-      if (inst.volume !== undefined) {
-        const volumeNormalized = inst.volume / 100;
-        this.audio.updateVolume(inst.id, volumeNormalized);
+    try {
+      await this.audio.ensureStarted();
+
+      const instrumentsToPreload = this.instruments.map(inst => ({
+        id: inst.id,
+        type: inst.type || 'synth'
+      }));
+
+      await this.audio.preloadInstruments(instrumentsToPreload);
+
+      // Apply volumes to all preloaded instruments
+      this.instruments.forEach(inst => {
+        if (inst.volume !== undefined) {
+          const volumeNormalized = inst.volume / 100;
+          this.audio.updateVolume(inst.id, volumeNormalized);
+        }
+      });
+
+      // Build pitch cache now!
+      this.buildPitchFrequencyCache();
+
+      this.isPrimed = true;
+    } catch (e) {
+      console.error('Priming failed:', e);
+      this.isPrimed = false;
+    } finally {
+      this.isPriming = false;
+    }
+  }
+
+  buildPitchFrequencyCache() {
+    this.pitchFrequencyCache = {};
+
+    for (let i = 0; i < this.instruments.length; i++) {
+      const inst = this.instruments[i];
+
+      for (let p = 0; p < inst.patterns.length; p++) {
+        const pattern = inst.patterns[p];
+        const notes = pattern.track.notes || [];
+
+        for (let n = 0; n < notes.length; n++) {
+          const pitch = notes[n].pitch;
+
+          if (this.pitchFrequencyCache[pitch] === undefined) {
+            this.pitchFrequencyCache[pitch] =
+              Frequency(pitch).toFrequency();
+          }
+        }
       }
-    });
+    }
+  }
+
+
+
+  async play() {
+    // If not primed, prime first (but this should be done via button)
+    if (!this.isPrimed) {
+      await this.prime();
+    }
+
+    // Stop all currently playing notes (but keep instruments loaded!)
+    this.audio.stopAll();
 
     // Duration of one 16th-note
     const noteStepDuration = 60 / this.bpm / 4;
@@ -239,11 +310,9 @@ export class Song {
     const PATTERN_NOTES = 16 * 4;
     const patternStepDuration = noteStepDuration * PATTERN_NOTES;
 
-    // Get the current audio time and add a small buffer to ensure everything is ready
-    // This ensures we don't schedule notes in the past or at exactly now()
+    // Minimal buffer - everything is already primed
     const currentTime = this.audio.now();
-    const bufferTime = 0.1; // 100ms buffer to ensure AudioContext is fully ready
-    const scheduleStartTime = currentTime + bufferTime;
+    const scheduleStartTime = currentTime + 0.01; // Just 10ms buffer
 
     let latest = 0;
 
@@ -257,35 +326,64 @@ export class Song {
     }
 
     // Play through the sequence (each "step" = one pattern)
-    this.sequence.forEach((sequenceStep, seqStepIndex) => {
-      const stepStartTime = scheduleStartTime + seqStepIndex * patternStepDuration;
+    for (let seqStepIndex = 0; seqStepIndex < this.sequence.length; seqStepIndex++) {
+      const sequenceStep = this.sequence[seqStepIndex];
+      const stepStartTime =
+        scheduleStartTime + seqStepIndex * patternStepDuration;
 
-      sequenceStep.forEach((sequenceItem: any) => {
-        const instrument = this.instruments.find(i => i.id === sequenceItem.instrumentId);
-        const pattern = instrument?.patterns.find(p => p.id === sequenceItem.patternId);
-        if (!pattern) return;
-        if (!instrument) return;
+      for (let s = 0; s < sequenceStep.length; s++) {
+        const sequenceItem = sequenceStep[s];
+        const instrument = this.instruments.find(
+          i => i.id === sequenceItem.instrumentId
+        );
+        if (!instrument) continue;
 
-        // Schedule each note
-        (pattern.track.notes || []).forEach((n: any) => {
-          const when = stepStartTime + n.start * noteStepDuration;
-          const dur = Math.max(0.02, n.duration * noteStepDuration);
-          // Convert volume from 0-100 range to 0-1 range, default to 0.8 if not set
-          const vol = instrument.volume !== undefined ? instrument.volume / 100 : 0.8;
+        const pattern = instrument.patterns.find(
+          p => p.id === sequenceItem.patternId
+        );
+        if (!pattern) continue;
 
-          this.audio.playNote(
-            instrument.id,
-            instrument.type || 'synth',
-            n.pitch,
-            when,
-            dur,
-            vol
-          );
+        const notes = pattern.track.notes || [];
+        const vol =
+          instrument.volume !== undefined
+            ? instrument.volume / 100
+            : 0.8;
 
-          latest = Math.max(latest, when + dur);
-        });
-      });
-    });
+        const isSoundFont =
+          this.audio.instrumentVoices[instrument.id]?.kind === 'soundfont';
+
+        for (let n = 0; n < notes.length; n++) {
+          const note = notes[n];
+          const when = stepStartTime + note.start * noteStepDuration;
+          const dur = Math.max(0.02, note.duration * noteStepDuration);
+
+          if (isSoundFont) {
+            // Use pitch string
+            this.audio.playNote(
+              instrument.id,
+              note.pitch,
+              when,
+              dur,
+              vol
+            );
+          } else {
+            // Use cached frequency
+            const freq = this.pitchFrequencyCache[note.pitch];
+            this.audio.playNote(
+              instrument.id,
+              freq,
+              when,
+              dur,
+              vol
+            );
+          }
+
+          if (when + dur > latest) {
+            latest = when + dur;
+          }
+        }
+      }
+    }
 
     // If no notes were scheduled, assume full length of sequence
     if (latest === 0) {
@@ -343,6 +441,9 @@ export class Song {
         const volumeNormalized = inst.volume / 100;
         this.audio.updateVolume(inst.id, volumeNormalized);
       });
+
+      // Reset primed flag - user needs to prime after loading
+      this.isPrimed = false;
     } catch (e) {
       console.error('Failed to load song data:', e);
     }

@@ -3,6 +3,10 @@ import * as Tone from 'tone';
 import Soundfont, { InstrumentName } from 'soundfont-player';
 
 type AnyVoice = Tone.FMSynth | Tone.PolySynth | Tone.PluckSynth | Tone.Sampler | Soundfont.Player;
+type VoiceWrapper = {
+  voice: AnyVoice;
+  kind: 'soundfont' | 'tone';
+};
 
 const SOUNDFONT_MAP: Record<string, InstrumentName> = {
   piano: 'acoustic_grand_piano',
@@ -17,7 +21,7 @@ export class AudioEngine {
   private started = false;
 
   // Store Tone.js and SoundFont players per instrument id
-  private instrumentVoices: Record<string, AnyVoice> = {};
+  instrumentVoices: Record<string, VoiceWrapper> = {};
 
   // Drum samples (keep as fallback)
   private drumSamples = {
@@ -47,36 +51,67 @@ export class AudioEngine {
       if (context.state === 'suspended') {
         await context.resume();
       }
-      // Tone.start() ensures the context is running
+      // Tone.start() ensures the context is running - this is sufficient
       await Tone.start();
-      
-      // Wait until AudioContext is actually running (not just resumed)
-      await this.waitForContextReady();
-      
+
       this.started = true;
+
+      // Now that context is started, preload any instruments that were added before
+      // This happens in the background and doesn't block
+      this.preloadPendingInstruments();
     }
   }
 
+  private pendingInstruments: Array<{ id: string; type: string }> = [];
+
   /**
-   * Wait until AudioContext is actually running and processing audio.
-   * This is more reliable than a fixed delay.
+   * Preload instruments that were added before AudioContext was ready.
    */
-  private async waitForContextReady(): Promise<void> {
-    const context = Tone.getContext();
-    const audioContext = context.rawContext as AudioContext;
-    
-    // Wait until context state is 'running'
-    while (audioContext.state !== 'running') {
-      await new Promise(resolve => setTimeout(resolve, 10));
-    }
-    
-    // Additional check: ensure the audio context is actually processing
-    // by waiting for currentTime to advance (indicating it's running)
-    const initialTime = audioContext.currentTime;
-    let attempts = 0;
-    while (audioContext.currentTime === initialTime && attempts < 50) {
-      await new Promise(resolve => setTimeout(resolve, 10));
-      attempts++;
+  private async preloadPendingInstruments() {
+    if (this.pendingInstruments.length === 0) return;
+
+    const toPreload = [...this.pendingInstruments];
+    this.pendingInstruments = [];
+
+    // Preload in background without blocking
+    Promise.all(
+      toPreload.map(inst =>
+        this.getOrCreateVoice(inst.id, inst.type).catch(() => {
+          // If it fails, add back to pending
+          this.pendingInstruments.push(inst);
+        })
+      )
+    ).catch(() => {
+      // Ignore errors - will retry on play
+    });
+  }
+
+  /**
+   * Preload a single instrument in the background.
+   * This can be called when an instrument is created to start loading early.
+   */
+  async preloadInstrument(id: string, type: string): Promise<void> {
+    try {
+      // If context is already started, preload immediately
+      if (this.started) {
+        await this.getOrCreateVoice(id, type);
+      } else {
+        // Store for later preloading when context starts
+        // Check if already in pending list
+        if (!this.pendingInstruments.find(p => p.id === id)) {
+          this.pendingInstruments.push({ id, type });
+        }
+
+        // Try to start AudioContext (non-blocking)
+        // This will work if there's been a user interaction
+        this.ensureStarted().catch(() => {
+          // If it fails (no user interaction yet), that's okay
+          // It will be started properly when user clicks play
+        });
+      }
+    } catch (e) {
+      // Silently fail - instrument will be loaded when play() is called
+      console.debug('Background preload failed (will retry on play):', e);
     }
   }
 
@@ -90,98 +125,99 @@ export class AudioEngine {
    * Note: ensureStarted() should be called before this method to avoid AudioContext warnings.
    */
   async getOrCreateVoice(
-  id: string,
-  instrumentType: string
-): Promise<AnyVoice> {
-  if (this.instrumentVoices[id]) {
-    return this.instrumentVoices[id];
-  }
+    id: string,
+    instrumentType: string
+  ): Promise<AnyVoice> {
+    if (this.instrumentVoices[id]) {
+      return this.instrumentVoices[id].voice;
+    }
 
-  // Ensure AudioContext is started before creating synths
-  // This prevents "AudioContext was prevented from starting" warnings
-  await this.ensureStarted();
+    await this.ensureStarted();
 
-  let inst: AnyVoice;
+    let inst: AnyVoice;
 
-  // ---- SoundFont instruments ----
-  if (instrumentType in SOUNDFONT_MAP) {
-    const audioContext =
-      Tone.getContext().rawContext as AudioContext;
+    if (instrumentType in SOUNDFONT_MAP) {
+      const audioContext = Tone.getContext().rawContext as AudioContext;
 
-    inst = await Soundfont.instrument(
-      audioContext,
-      SOUNDFONT_MAP[instrumentType]
-    );
+      inst = await Soundfont.instrument(
+        audioContext,
+        SOUNDFONT_MAP[instrumentType]
+      );
 
-    this.instrumentVoices[id] = inst;
+      const kind = (inst as any).play && (inst as any).stop && !('triggerAttackRelease' in inst) ? 'soundfont' : 'tone';
+
+      this.instrumentVoices[id] = { voice: inst, kind };
+      return inst;
+    }
+
+    switch (instrumentType) {
+      case 'pad':
+        inst = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.5, release: 1.5 }
+        }).toDestination();
+        break;
+
+      case 'pluck':
+        inst = new Tone.PluckSynth().toDestination();
+        break;
+
+      case 'drum':
+        inst = new Tone.Sampler({
+          urls: this.drumSamples,
+          baseUrl: 'assets/drums/'
+        }).toDestination();
+        await (inst as Tone.Sampler).loaded;
+        break;
+
+      case 'synth':
+      default:
+        inst = new Tone.PolySynth(Tone.Synth).toDestination();
+        break;
+    }
+
+    const kind = (inst as any).play && (inst as any).stop && !('triggerAttackRelease' in inst) ? 'soundfont' : 'tone';
+
+    this.instrumentVoices[id] = { voice: inst, kind };
     return inst;
   }
 
-  // ---- Tone.js instruments ----
-  switch (instrumentType) {
-    case 'pad':
-      inst = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'sine' },
-        envelope: { attack: 0.5, release: 1.5 }
-      }).toDestination();
-      break;
-
-    case 'pluck':
-      inst = new Tone.PluckSynth().toDestination();
-      break;
-
-    case 'drum':
-      inst = new Tone.Sampler({
-        urls: this.drumSamples,
-        baseUrl: 'assets/drums/'
-      }).toDestination();
-      // Wait for sampler to load all audio files before considering it ready
-      await (inst as Tone.Sampler).loaded;
-      break;
-
-    case 'synth':
-    default:
-      inst = new Tone.PolySynth(Tone.Synth).toDestination();
-      break;
-  }
-
-  this.instrumentVoices[id] = inst;
-  return inst;
-}
 
 
   /**
    * Pre-create all instrument voices for the given instruments.
    * This should be called before scheduling notes to avoid delays.
    * Ensures all instruments are fully loaded and ready to play.
+   * Optimized to skip already-loaded instruments.
    */
   async preloadInstruments(instruments: Array<{ id: string; type: string }>) {
-    const promises = instruments.map(inst => 
+    // Filter out instruments that are already loaded
+    const toLoad = instruments.filter(inst => !this.instrumentVoices[inst.id]);
+
+    if (toLoad.length === 0) {
+      // All instruments already loaded - return immediately
+      return;
+    }
+
+    // Only load instruments that aren't already loaded
+    const promises = toLoad.map(inst =>
       this.getOrCreateVoice(inst.id, inst.type)
     );
     await Promise.all(promises);
-    
-    // Additional check: ensure all Samplers are fully loaded
-    // Note: We already wait for loaded in getOrCreateVoice, but this provides extra safety
+
+    // Wait for Samplers that were just loaded
     const samplerPromises: Promise<void>[] = [];
-    for (const voice of Object.values(this.instrumentVoices)) {
+    for (const inst of toLoad) {
+      const voice = this.instrumentVoices[inst.id];
       if (voice instanceof Tone.Sampler) {
-        // loaded is a Promise in Tone.js, but TypeScript types may not reflect this
-        // Use 'unknown' first to bypass strict type checking
         const loadedPromise = (voice as any).loaded as unknown;
         if (loadedPromise && typeof (loadedPromise as any).then === 'function') {
-          samplerPromises.push((loadedPromise as Promise<void>).then(() => {}));
+          samplerPromises.push((loadedPromise as Promise<void>).then(() => { }));
         }
       }
     }
     if (samplerPromises.length > 0) {
       await Promise.all(samplerPromises);
-    }
-    
-    // Final verification: ensure AudioContext is still running
-    const context = Tone.getContext();
-    if (context.state !== 'running') {
-      await this.waitForContextReady();
     }
   }
 
@@ -214,59 +250,45 @@ export class AudioEngine {
    */
   playNote(
     instrumentId: string,
-    instrumentType: string,
-    pitch: string,
+    pitchOrFreq: string | number, // string for SoundFont, number for Tone
     when: number,
     duration: number,
     volume = 1
   ) {
-    // Get voice synchronously - it should already exist from preloadInstruments
-    const inst = this.instrumentVoices[instrumentId];
-    if (!inst) {
-      console.warn(`Instrument voice ${instrumentId} not found. It should be preloaded.`);
+    const entry = this.instrumentVoices[instrumentId];
+    if (!entry) return;
+
+    const inst = entry.voice;
+    const dur = duration < 0.05 ? 0.05 : duration;
+
+    if (entry.kind === 'soundfont') {
+      // SoundFont requires pitch string
+      (inst as any).play(pitchOrFreq as string, when, {
+        duration: dur,
+        gain: volume
+      });
       return;
     }
 
-    const time = Tone.now() + Math.max(0, when);
-    const dur = Math.max(0.05, duration);
-
-    // Handle Soundfont player differently
-    if ('play' in inst && typeof inst.play === 'function' && !('triggerAttackRelease' in inst)) {
-      // This is a Soundfont.Player instance
-      // Soundfont player volume is controlled per note via gain parameter
-      inst.play(pitch, time, { duration: dur, gain: volume });
-      return;
-    }
-
-    // For Tone.js synths: set volume on the synth before playing
-    // Volume conversion: 0-1 range to dB
-    const db = volume <= 0 ? -96 : Math.max(-24, (volume - 1) * 24);
-    if ((inst as any).volume) {
-      (inst as any).volume.value = db;
-    }
-
-    if ('triggerAttackRelease' in inst) {
-      (inst as any).triggerAttackRelease(pitch, dur, time);
-    } else if ('triggerAttack' in inst && 'triggerRelease' in inst) {
-      (inst as any).triggerAttack(pitch, time);
-      (inst as any).triggerRelease(time + dur);
-    }
+    // Tone.js synths use frequency directly (FAST PATH)
+    (inst as any).triggerAttackRelease(pitchOrFreq as number, dur, when);
   }
 
+
+
   stopAll() {
+    // Only stop/release notes, DON'T dispose instruments - keep them for next play!
     Object.values(this.instrumentVoices).forEach(v => {
       try {
         if ('stop' in v) {
           (v as any).stop(); // For SoundFont player
         }
         if ('releaseAll' in v) {
-          (v as any).releaseAll(); // For Tone.js synths
+          (v as any).releaseAll(); // For Tone.js synths - stops all notes
         }
-        if ('dispose' in v) {
-          (v as any).dispose();
-        }
-      } catch {}
+        // DO NOT dispose - we want to keep instruments loaded!
+      } catch { }
     });
-    this.instrumentVoices = {};
+    // DO NOT clear instrumentVoices - keep them loaded!
   }
 }

@@ -1,4 +1,4 @@
-<div class="song-container p-4 bg-gray-950 text-gray-200 min-h-screen">
+<div class="song-container p-4 bg-gray-950 text-gray-200 min-h-screen" (click)="onUserInteraction()">
   <div class="controls flex gap-4 mb-4 items-center">
     <!-- Octave Range Controls -->
     <label>
@@ -73,6 +73,17 @@
 
     <button class="bg-red-700 hover:bg-red-600 px-2 py-1 rounded text-sm" (click)="deleteCurrentPattern()">
       🗑 Delete Pattern
+    </button>
+
+    <button 
+      class="px-2 py-1 rounded text-sm"
+      [class.bg-yellow-700]="!isPrimed"
+      [class.bg-green-700]="isPrimed"
+      [class.hover:bg-yellow-600]="!isPrimed"
+      [class.hover:bg-green-600]="isPrimed"
+      [disabled]="isPriming"
+      (click)="prime()">
+      {{ isPriming ? '⏳ Priming...' : (isPrimed ? '✓ Primed' : '⚡ Prime') }}
     </button>
   </div>
 
