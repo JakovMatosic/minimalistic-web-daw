@@ -5,27 +5,8 @@ import { PianoRoll } from '../piano-roll/piano-roll';
 import { InstrumentSettingsBar } from '../instrument-settings-bar/instrument-settings-bar';
 import { Playback } from '../playback/playback';
 import { AudioEngine } from '../audio/audio-engine';
-
-interface Note {
-  pitch: string;
-  start: number;
-  duration: number;
-}
-
-interface Pattern {
-  id: string;
-  name: string;
-  track: { notes: Note[] };
-  minOctave: number;
-  maxOctave: number;
-}
-
-interface Instrument {
-  id: string;
-  name: string;
-  type?: string;
-  patterns: Pattern[];
-}
+import { INSTRUMENT_LABELS, InstrumentType } from '../audio/instrument-types';
+import { Instrument, Pattern, createInstrument } from '../song/instruments/instrument-config';
 
 @Component({
   selector: 'app-song',
@@ -36,25 +17,14 @@ interface Instrument {
 })
 export class Song {
   private storageKey = 'web-daw-song-data';
+  readonly INSTRUMENT_LABELS = INSTRUMENT_LABELS;
+  instrumentTypes = Object.keys(INSTRUMENT_LABELS) as InstrumentType[];
 
   instruments: Instrument[] = [
-    {
-      id: 'synth-1',
-      name: 'Synth 1',
-      type: 'synth',
-      patterns: [
-        { id: 'p1', name: 'Pattern 1', track: { notes: [] }, minOctave: 4, maxOctave: 5 }
-      ]
-    },
-    {
-      id: 'drum-1',
-      name: 'Drum 1',
-      type: 'drum',
-      patterns: [
-        { id: 'p1', name: 'Beat 1', track: { notes: [] }, minOctave: 4, maxOctave: 5 }
-      ]
-    }
+    createInstrument('synth', 1),
+    createInstrument('drum', 1)
   ];
+
 
   currentInstrumentId = 'synth-1';
   currentPatternId = 'p1';
@@ -168,30 +138,47 @@ export class Song {
     this.saveToStorage();
   }
 
+
+
   // --- Instrument management ---
-  addInstrument(type: string) {
-    const count = this.instruments.filter(i => i.type === type).length + 1;
-    const id = `${type}-${count}`;
-    const name = `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`;
-    const defaultPattern: Pattern = {
-      id: 'p1',
-      name: type === 'drum' ? 'Beat 1' : 'Pattern 1',
-      track: { notes: [] },
-      minOctave: 4,
-      maxOctave: 5
-    };
-    const newInstrument: Instrument = {
-      id,
-      name,
-      type,
-      patterns: [defaultPattern]
-    };
+  addInstrument(type: InstrumentType) {
+    const count =
+      this.instruments.filter(i => i.type === type).length + 1;
+
+    const newInstrument = createInstrument(type, count);
+
     this.instruments.push(newInstrument);
-    this.currentInstrumentId = id;
+    this.currentInstrumentId = newInstrument.id;
     this.currentPatternId = 'p1';
-    const p = this.currentPattern;
+
+    const p = newInstrument.patterns[0];
     this.pianoRollMinOctave = p.minOctave;
     this.pianoRollMaxOctave = p.maxOctave;
+
+    this.saveToStorage();
+  }
+
+  deleteCurrentInstrument() {
+    // Prevent deleting if it's the last instrument
+    if (this.instruments.length <= 1) {
+      alert('Cannot delete the last instrument. You must have at least one instrument.');
+      return;
+    }
+
+    const instrument = this.currentInstrument;
+    const confirmDelete = confirm(`Delete instrument "${instrument.name}"?`);
+    if (!confirmDelete) return;
+
+    // Remove the instrument
+    this.instruments = this.instruments.filter(i => i.id !== this.currentInstrumentId);
+
+    // Switch to the first remaining instrument
+    this.currentInstrumentId = this.instruments[0].id;
+    this.currentPatternId = this.instruments[0].patterns[0].id;
+    const pattern = this.currentPattern;
+    this.pianoRollMinOctave = pattern.minOctave;
+    this.pianoRollMaxOctave = pattern.maxOctave;
+
     this.saveToStorage();
   }
 
@@ -216,7 +203,7 @@ export class Song {
     // Duration of one 16th-note
     const noteStepDuration = 60 / this.bpm / 4;
     // 16 bars of 4 notes
-    const PATTERN_NOTES = 16*4;
+    const PATTERN_NOTES = 16 * 4;
     const patternStepDuration = noteStepDuration * PATTERN_NOTES;
 
     let latest = 0;
@@ -245,7 +232,17 @@ export class Song {
           const dur = Math.max(0.02, n.duration * noteStepDuration);
           const vol = (instrument as any).volume ? (instrument as any).volume / 100 : 0.8;
 
-          this.audio.playNote(n.pitch, when, dur, vol);
+          if (instrument) {
+            this.audio.playNote(
+              instrument.id,
+              instrument.type || 'synth',
+              n.pitch,
+              when,
+              dur,
+              vol
+            );
+          }
+
           latest = Math.max(latest, when + dur);
         });
       });
