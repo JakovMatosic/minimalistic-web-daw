@@ -217,6 +217,22 @@ export class Song {
     await this.audio.ensureStarted();
     this.audio.stopAll();
 
+    // Pre-create all instrument voices before scheduling notes
+    // This prevents delays during playback
+    const instrumentsToPreload = this.instruments.map(inst => ({
+      id: inst.id,
+      type: inst.type || 'synth'
+    }));
+    await this.audio.preloadInstruments(instrumentsToPreload);
+    
+    // Apply volumes to all preloaded instruments
+    this.instruments.forEach(inst => {
+      if (inst.volume !== undefined) {
+        const volumeNormalized = inst.volume / 100;
+        this.audio.updateVolume(inst.id, volumeNormalized);
+      }
+    });
+
     // Duration of one 16th-note
     const noteStepDuration = 60 / this.bpm / 4;
     // 16 bars of 4 notes

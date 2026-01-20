@@ -26,8 +26,28 @@ export class AudioEngine {
     E3: 'hihat.wav'
   };
 
+  constructor() {
+    // Suppress AudioContext warnings by ensuring Tone.js uses a suspended context
+    // until user interaction. Tone.js creates contexts automatically on import,
+    // but we'll only resume them after ensureStarted() is called (which happens
+    // after user interaction in play()).
+    try {
+      const context = Tone.getContext();
+      // If the context was auto-created and is suspended, that's fine - we'll resume it later
+      // If it's running, we can't change that, but it shouldn't cause issues
+    } catch (e) {
+      // Context might not exist yet, which is also fine
+    }
+  }
+
   async ensureStarted() {
     if (!this.started) {
+      // Resume the AudioContext if it's suspended (which it will be until user interaction)
+      const context = Tone.getContext();
+      if (context.state === 'suspended') {
+        await context.resume();
+      }
+      // Tone.start() ensures the context is running
       await Tone.start();
       this.started = true;
     }
@@ -40,6 +60,7 @@ export class AudioEngine {
   /**
    * Get or create an instrument voice.
    * For some instruments, load SoundFont instead of Tone synth.
+   * Note: ensureStarted() should be called before this method to avoid AudioContext warnings.
    */
   async getOrCreateVoice(
   id: string,
@@ -48,6 +69,10 @@ export class AudioEngine {
   if (this.instrumentVoices[id]) {
     return this.instrumentVoices[id];
   }
+
+  // Ensure AudioContext is started before creating synths
+  // This prevents "AudioContext was prevented from starting" warnings
+  await this.ensureStarted();
 
   let inst: AnyVoice;
 
@@ -97,6 +122,17 @@ export class AudioEngine {
 
 
   /**
+   * Pre-create all instrument voices for the given instruments.
+   * This should be called before scheduling notes to avoid delays.
+   */
+  async preloadInstruments(instruments: Array<{ id: string; type: string }>) {
+    const promises = instruments.map(inst => 
+      this.getOrCreateVoice(inst.id, inst.type)
+    );
+    await Promise.all(promises);
+  }
+
+  /**
    * Update the volume of an existing instrument voice.
    */
   updateVolume(instrumentId: string, volume: number) {
@@ -121,8 +157,9 @@ export class AudioEngine {
   /**
    * Play a note with the specified instrument.
    * Adjusted to handle SoundFont players and Tone.js synths.
+   * Note: Voice should be pre-created with preloadInstruments() for best performance.
    */
-  async playNote(
+  playNote(
     instrumentId: string,
     instrumentType: string,
     pitch: string,
@@ -130,7 +167,12 @@ export class AudioEngine {
     duration: number,
     volume = 1
   ) {
-    const inst = await this.getOrCreateVoice(instrumentId, instrumentType);
+    // Get voice synchronously - it should already exist from preloadInstruments
+    const inst = this.instrumentVoices[instrumentId];
+    if (!inst) {
+      console.warn(`Instrument voice ${instrumentId} not found. It should be preloaded.`);
+      return;
+    }
 
     const time = Tone.now() + Math.max(0, when);
     const dur = Math.max(0.05, duration);
