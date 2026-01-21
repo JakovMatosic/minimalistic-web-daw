@@ -106,7 +106,7 @@ export class PianoRoll implements OnInit, OnChanges {
 
     const pitchIndex = Math.floor((relY / rect.height) * this.pitches.length);
     const pitch = this.pitches[pitchIndex];
-    const quarterStep = Math.round((relX / rect.width) * this.quarterSteps);
+    const quarterStep = Math.floor((relX / rect.width) * this.quarterSteps);
 
     this.currentNote = { pitch, start: quarterStep, duration: 1 };
     this.startStep = quarterStep;
