@@ -274,21 +274,25 @@ export class AudioEngine {
     (inst as any).triggerAttackRelease(pitchOrFreq as number, dur, when);
   }
 
-
-
-  stopAll() {
-    // Only stop/release notes, DON'T dispose instruments - keep them for next play!
+  async stopAll() {
+    // Best-effort stop for currently sounding voices
     Object.values(this.instrumentVoices).forEach(v => {
       try {
-        if ('stop' in v) {
-          (v as any).stop(); // For SoundFont player
+        if ('stop' in v.voice) {
+          (v.voice as any).stop();
         }
-        if ('releaseAll' in v) {
-          (v as any).releaseAll(); // For Tone.js synths - stops all notes
+        if ('releaseAll' in v.voice) {
+          (v.voice as any).releaseAll();
         }
-        // DO NOT dispose - we want to keep instruments loaded!
       } catch { }
     });
-    // DO NOT clear instrumentVoices - keep them loaded!
+
+    // HARD STOP: cancel all scheduled future events
+    const raw = Tone.getContext().rawContext;
+    if (raw && raw instanceof AudioContext) {
+      if (raw.state === 'running') {
+        await raw.suspend();
+      }
+    }
   }
 }
