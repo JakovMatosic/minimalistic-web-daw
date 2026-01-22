@@ -112,7 +112,8 @@
   </app-piano-roll>
 
   <app-playback [bpm]="bpm" [isPlaying]="isPlaying" [instruments]="instruments" (bpmChange)="bpm = $event"
-    (togglePlay)="togglePlay()" (sequenceChange)="onSequenceChange($event)">
+    (togglePlay)="togglePlay()" (sequenceChange)="onSequenceChange($event)"
+    (openInstrument)="openInstrumentFromPlayback($event)">
   </app-playback>
 
   <app-instrument-settings-bar [instruments]="instruments" (openSettings)="openInstrumentSettings($event)"

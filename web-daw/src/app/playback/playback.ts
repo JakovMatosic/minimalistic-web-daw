@@ -28,6 +28,7 @@ export class Playback implements OnInit, OnChanges {
   @Output() bpmChange = new EventEmitter<number>();
   @Output() togglePlay = new EventEmitter<void>();
   @Output() sequenceChange = new EventEmitter<SequenceItem[][]>();
+  @Output() openInstrument = new EventEmitter<string>();
 
   // Sequencer data: array of arrays, where each sub-array is a column (time step)
   // Each column contains SequenceItem[] representing which patterns play at that step
@@ -77,7 +78,7 @@ export class Playback implements OnInit, OnChanges {
 
   selectPatternForSequence(instrumentId: string, stepIndex: number, patternId: string) {
     if (!patternId) return;
-    
+
     const existingIndex = this.sequence[stepIndex].findIndex(item => item.instrumentId === instrumentId);
     if (existingIndex >= 0) {
       return; // Already has a pattern for this instrument
@@ -125,6 +126,11 @@ export class Playback implements OnInit, OnChanges {
 
   onTogglePlay() {
     this.togglePlay.emit();
+  }
+
+  onOpenInstrument(instId: string) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.openInstrument.emit(instId);
   }
 
   /**

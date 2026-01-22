@@ -80,10 +80,8 @@ export class Song {
     return this.currentInstrument.patterns.find(p => p.id === this.currentPatternId)!;
   }
 
-  // --- Event handlers ---
-  handleInstrumentChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    this.currentInstrumentId = select.value;
+  private setCurrentInstrument(instrumentId: string) {
+    this.currentInstrumentId = instrumentId;
     this.currentPatternId = this.currentInstrument.patterns[0].id;
 
     const pattern = this.currentPattern;
@@ -91,6 +89,16 @@ export class Song {
     this.pianoRollMaxOctave = pattern.maxOctave;
 
     this.saveToStorage();
+  }
+
+  // --- Event handlers ---
+  handleInstrumentChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.setCurrentInstrument(select.value);
+  }
+
+  openInstrumentFromPlayback(instrumentId: string) {
+    this.setCurrentInstrument(instrumentId);
   }
 
   handlePatternChange(event: Event) {

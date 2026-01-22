@@ -85,7 +85,9 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 0.75rem;
+  /* Add this line to fill the width of the row */
+  flex: 1;
+
   border-bottom: 1px solid rgba(107, 114, 128, 0.3);
   font-size: 0.875rem;
   font-weight: 500;
@@ -240,3 +242,50 @@ button:active {
   background-color: rgba(79, 70, 229, 0.5);
 }
 
+/* Update the container to allow the button to fill it */
+.instrument-label.button-container {
+  padding: 0;
+  /* Remove padding so button fills the cell */
+  overflow: hidden;
+}
+
+.instrument-label.button-container {
+  padding: 2px; /* Creates a small gap so the button doesn't touch the grid lines */
+  background-color: rgba(17, 24, 39, 0.8); /* Darker background for the cell */
+}
+
+.instrument-label-btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Pushes text to left and icon to right */
+  padding: 0 0.75rem;
+  
+  /* Button-like Appearance */
+  background: linear-gradient(180deg, rgba(55, 65, 81, 0.8) 0%, rgba(31, 41, 55, 0.8) 100%);
+  border: 1px solid rgba(107, 114, 128, 0.4);
+  border-radius: 4px;
+  color: #e5e7eb;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+/* Hover effect now covers the entire 150px width */
+.instrument-label-btn:hover {
+  background-color: rgba(79, 70, 229, 0.2);
+  color: #ffffff;
+}
+
+/* Visual feedback when clicked */
+.instrument-label-btn:active {
+  background-color: rgba(79, 70, 229, 0.4);
+  transform: scale(0.98);
+}
+
+/* Focus state for accessibility */
+.instrument-label-btn:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: -2px;
+}
