@@ -1,5 +1,6 @@
 import { Component, HostListener, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { isPitchAllowed, ScaleType } from '../song/scales/scales';
 
 interface Note {
   pitch: string;
@@ -22,6 +23,8 @@ export class PianoRoll implements OnInit, OnChanges {
   @Input() track!: Track;
   @Input() minOctave = 4;
   @Input() maxOctave = 5;
+  @Input() rootKey = 0;
+  @Input() scale: ScaleType = 'major';
 
   octaves = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
   pitches: string[] = [];
@@ -40,20 +43,22 @@ export class PianoRoll implements OnInit, OnChanges {
 
   updatePitches() {
     this.pitches = [];
+    const shiftedOctaves = this.getShiftedOctaves();
     for (let octave = this.maxOctave; octave >= this.minOctave; octave--) {
-      for (let i = this.octaves.length - 1; i >= 0; i--) {
-        this.pitches.push(`${this.octaves[i]}${octave}`);
+      for (let i = shiftedOctaves.length - 1; i >= 0; i--) {
+        this.pitches.push(`${shiftedOctaves[i]}${octave}`);
       }
     }
     this.noteHeight = `calc(100% / ${this.pitches.length})`;
   }
+
 
   ngOnInit() {
     this.updatePitches();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['minOctave'] || changes['maxOctave']) {
+    if (changes['minOctave'] || changes['maxOctave'] || changes['rootKey'] || changes['scale']) {
       this.updatePitches();
     }
   }
@@ -106,6 +111,10 @@ export class PianoRoll implements OnInit, OnChanges {
 
     const pitchIndex = Math.floor((relY / rect.height) * this.pitches.length);
     const pitch = this.pitches[pitchIndex];
+
+    if (this.isRowDisabled(pitch)) {
+      return;
+    }
     const quarterStep = Math.floor((relX / rect.width) * this.quarterSteps);
 
     this.currentNote = { pitch, start: quarterStep, duration: 1 };
@@ -183,6 +192,11 @@ export class PianoRoll implements OnInit, OnChanges {
     return this.pitches.includes(note.pitch);
   }
 
+  isRowDisabled(pitch: string): boolean {
+    return !isPitchAllowed(pitch, this.rootKey, this.scale);
+  }
+
+
   getNoteTop(pitch: string): string {
     const index = this.pitches.indexOf(pitch);
     if (index === -1) return '0%';
@@ -196,4 +210,11 @@ export class PianoRoll implements OnInit, OnChanges {
   getNoteWidth(duration: number): string {
     return `${(duration / this.quarterSteps) * 100}%`;
   }
+
+  getShiftedOctaves(): string[] {
+    // rootKey is 0-11 integer representing semitone from C
+    const n = this.rootKey % 12;
+    return [...this.octaves.slice(n), ...this.octaves.slice(0, n)];
+  }
+
 }

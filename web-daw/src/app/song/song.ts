@@ -7,8 +7,8 @@ import { Playback } from '../playback/playback';
 import { AudioEngine } from '../audio/audio-engine';
 import { INSTRUMENT_LABELS, InstrumentType } from '../audio/instrument-types';
 import { Instrument, Pattern, createInstrument } from '../song/instruments/instrument-config';
-import { Tone } from 'tone/build/esm/core/Tone';
 import { Frequency } from 'tone';
+import { KEYS, SCALES, ScaleType } from './scales/scales';
 
 @Component({
   selector: 'app-song',
@@ -48,6 +48,13 @@ export class Song {
   // Piano roll octave range
   pianoRollMinOctave = 4;
   pianoRollMaxOctave = 5;
+
+  // Song-wide musical context
+  rootKey: number = 0; // 0 = C
+  scale: ScaleType = 'major';
+  scaleTypes = Object.keys(SCALES) as ScaleType[];
+  keys = KEYS
+
 
   constructor(private audio: AudioEngine) {
     this.loadFromStorage();
@@ -95,12 +102,23 @@ export class Song {
     this.saveToStorage();
   }
 
+  onKeyOrScaleChange() {
+    this.saveToStorage();
+  }
+
   trackByPatternId(index: number, pattern: Pattern) {
     return pattern.id;
   }
 
   trackByInstrumentId(index: number, inst: Instrument) {
     return inst.id;
+  }
+  trackByKey(index: number, key: { value: number }) {
+    return key.value;
+  }
+
+  trackByScale(index: number, scale: ScaleType) {
+    return scale;
   }
 
 
@@ -409,12 +427,13 @@ export class Song {
     this.isPlaying = false;
   }
 
-  // --- Persistence ---
   saveToStorage() {
     const data = {
       instruments: this.instruments,
       currentInstrumentId: this.currentInstrumentId,
       currentPatternId: this.currentPatternId,
+      rootKey: this.rootKey,
+      scale: this.scale,
     };
     localStorage.setItem(this.storageKey, JSON.stringify(data));
   }
@@ -434,6 +453,8 @@ export class Song {
       this.instruments = data.instruments || this.instruments;
       this.currentInstrumentId = data.currentInstrumentId || 'piano';
       this.currentPatternId = data.currentPatternId || 'p1';
+      this.rootKey = data.rootKey ?? this.rootKey;
+      this.scale = data.scale ?? this.scale;
 
       // Ensure all instruments have volume set and apply to audio engine
       this.instruments.forEach(inst => {

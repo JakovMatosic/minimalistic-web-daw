@@ -1,52 +1,47 @@
 <div class="piano-roll flex select-none">
   <!-- Piano keys -->
   <div class="keys border-r border-gray-700 bg-gray-800"
-       [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
-    <div *ngFor="let pitch of pitches" 
-         class="key flex items-center justify-end pr-2 text-xs text-gray-300">
+    [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
+    <div *ngFor="let pitch of pitches" class="key flex items-center justify-end pr-2 text-xs text-gray-300">
       {{ pitch }}
     </div>
   </div>
 
   <!-- Grid area -->
-  <div class="grid-area relative flex-1 overflow-hidden bg-gray-900"
-       (mousedown)="handleGridMouseDown($event)"
-       (mousemove)="handleMouseMove($event)"
-       (mouseup)="endNote()"
-       (mouseleave)="endNote()">
+  <div class="grid-area relative flex-1 overflow-hidden bg-gray-900" (mousedown)="handleGridMouseDown($event)"
+    (mousemove)="handleMouseMove($event)" (mouseup)="endNote()" (mouseleave)="endNote()">
+    
+    <!-- Disabled pitch rows overlay -->
+    <div class="row-overlay absolute inset-0" [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
+      <div *ngFor="let pitch of pitches" class="piano-row" [class.disabled]="isRowDisabled(pitch)">
+      </div>
+    </div>
 
     <!-- Quarter-step grid -->
-    <div class="quarter-grid absolute inset-0"
-         [style.gridTemplateColumns]="'repeat(' + quarterSteps + ', 1fr)'"
-         [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
-      <div *ngFor="let q of getQuarterGridCells()"
-           class="quarter-cell hover:bg-gray-700"
-           [style.borderRightColor]="q.isMajor ? 'rgb(55,65,81)' : 'rgb(31,41,55)'">
+    <div class="quarter-grid absolute inset-0" [style.gridTemplateColumns]="'repeat(' + quarterSteps + ', 1fr)'"
+      [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
+      <div *ngFor="let q of getQuarterGridCells()" class="quarter-cell hover:bg-gray-700"
+        [style.borderRightColor]="q.isMajor ? 'rgb(55,65,81)' : 'rgb(31,41,55)'">
       </div>
     </div>
 
     <!-- Main grid -->
-    <div class="grid absolute inset-0"
-         [style.gridTemplateColumns]="'repeat(' + totalSteps + ', 1fr)'"
-         [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
-      <div *ngFor="let cell of gridCells"
-           class="cell border border-gray-800 cursor-pointer">
+    <div class="grid absolute inset-0" [style.gridTemplateColumns]="'repeat(' + totalSteps + ', 1fr)'"
+      [style.gridTemplateRows]="'repeat(' + pitches.length + ', 1fr)'">
+      <div *ngFor="let cell of gridCells" class="cell border border-gray-800 cursor-pointer">
       </div>
     </div>
 
     <!-- Render notes -->
     <ng-container *ngFor="let note of track.notes">
-      <div *ngIf="isNoteVisible(note)"
-           class="note-container absolute"
-           [ngStyle]="{
+      <div *ngIf="isNoteVisible(note)" class="note-container absolute" [ngStyle]="{
              top: getNoteTop(note.pitch),
              left: getNoteLeft(note.start),
              width: getNoteWidth(note.duration),
              height: noteHeight
            }">
         <div class="note bg-blue-400 rounded-sm opacity-90 relative h-full"
-             [class.note-selected]="selectedNote === note"
-             (mousedown)="handleNoteMouseDown($event, note)">
+          [class.note-selected]="selectedNote === note" (mousedown)="handleNoteMouseDown($event, note)">
           <div class="resize-handle resize-handle-left"></div>
           <div class="resize-handle resize-handle-right"></div>
         </div>
