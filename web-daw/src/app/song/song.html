@@ -27,7 +27,7 @@
 
 
     <label>
-      Min Octave:
+      Lowest Octave:
       <select [(ngModel)]="pianoRollMinOctave" (change)="updatePianoRollOctaves()"
         class="bg-gray-800 border border-gray-700 p-1 rounded">
         <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
@@ -37,7 +37,7 @@
     </label>
 
     <label>
-      Max Octave:
+      Highest Octave:
       <select [(ngModel)]="pianoRollMaxOctave" (change)="updatePianoRollOctaves()"
         class="bg-gray-800 border border-gray-700 p-1 rounded">
         <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
