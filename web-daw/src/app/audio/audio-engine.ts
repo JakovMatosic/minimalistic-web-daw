@@ -6,6 +6,7 @@ type AnyVoice = Tone.FMSynth | Tone.PolySynth | Tone.PluckSynth | Tone.Sampler |
 type VoiceWrapper = {
   voice: AnyVoice;
   kind: 'soundfont' | 'tone';
+  instrumentType?: string; // Store type so we can recreate after disposal
 };
 
 const SOUNDFONT_MAP: Record<string, InstrumentName> = {
@@ -19,6 +20,8 @@ const SOUNDFONT_MAP: Record<string, InstrumentName> = {
 @Injectable({ providedIn: 'root' })
 export class AudioEngine {
   private started = false;
+  private stopTime: number = 0; // Timestamp when stop was called
+  private currentPlaybackId: number = 0; // Increment on each play to invalidate old scheduled notes
 
   // Store Tone.js and SoundFont players per instrument id
   instrumentVoices: Record<string, VoiceWrapper> = {};
@@ -146,7 +149,7 @@ export class AudioEngine {
 
       const kind = (inst as any).play && (inst as any).stop && !('triggerAttackRelease' in inst) ? 'soundfont' : 'tone';
 
-      this.instrumentVoices[id] = { voice: inst, kind };
+      this.instrumentVoices[id] = { voice: inst, kind, instrumentType };
       return inst;
     }
 
@@ -178,7 +181,7 @@ export class AudioEngine {
 
     const kind = (inst as any).play && (inst as any).stop && !('triggerAttackRelease' in inst) ? 'soundfont' : 'tone';
 
-    this.instrumentVoices[id] = { voice: inst, kind };
+    this.instrumentVoices[id] = { voice: inst, kind, instrumentType };
     return inst;
   }
 
@@ -248,6 +251,22 @@ export class AudioEngine {
    * Adjusted to handle SoundFont players and Tone.js synths.
    * Note: Voice should be pre-created with preloadInstruments() for best performance.
    */
+  /**
+   * Reset the stop timestamp and start a new playback session.
+   * Call this when starting a new playback.
+   */
+  resetStopTime() {
+    this.stopTime = 0;
+    this.currentPlaybackId++;
+  }
+
+  /**
+   * Get the current playback ID. Notes scheduled with this ID are valid.
+   */
+  getCurrentPlaybackId(): number {
+    return this.currentPlaybackId;
+  }
+
   playNote(
     instrumentId: string,
     pitchOrFreq: string | number, // string for SoundFont, number for Tone
@@ -255,6 +274,11 @@ export class AudioEngine {
     duration: number,
     volume = 1
   ) {
+    // Don't schedule notes if stop was called
+    if (this.stopTime > 0 && when >= this.stopTime) {
+      return; // This note was scheduled after stop was called
+    }
+
     const entry = this.instrumentVoices[instrumentId];
     if (!entry) return;
 
@@ -274,25 +298,64 @@ export class AudioEngine {
     (inst as any).triggerAttackRelease(pitchOrFreq as number, dur, when);
   }
 
-  async stopAll() {
-    // Best-effort stop for currently sounding voices
-    Object.values(this.instrumentVoices).forEach(v => {
-      try {
-        if ('stop' in v.voice) {
-          (v.voice as any).stop();
-        }
-        if ('releaseAll' in v.voice) {
-          (v.voice as any).releaseAll();
-        }
-      } catch { }
-    });
+  async stopAll(disposeSynths = false) {
+    // Set stop timestamp to prevent future scheduled notes from playing
+    // Only set stopTime if we're actually stopping (not disposing to start new playback)
+    if (!disposeSynths) {
+      this.stopTime = Tone.now();
+    }
 
-    // HARD STOP: cancel all scheduled future events
-    const raw = Tone.getContext().rawContext;
-    if (raw && raw instanceof AudioContext) {
-      if (raw.state === 'running') {
-        await raw.suspend();
+    // Stop all currently sounding voices
+    const instrumentIds = Object.keys(this.instrumentVoices);
+    const toRecreate: Array<{ id: string; type: string }> = [];
+    
+    for (const id of instrumentIds) {
+      const wrapper = this.instrumentVoices[id];
+      if (!wrapper) continue;
+
+      try {
+        const voice = wrapper.voice;
+        
+        // For Tone.js synths
+        if (wrapper.kind === 'tone') {
+          // Always release currently playing notes
+          if ('releaseAll' in voice && typeof (voice as any).releaseAll === 'function') {
+            (voice as any).releaseAll();
+          }
+          
+          // Only dispose if explicitly requested (when actually stopping, not when starting new playback)
+          if (disposeSynths) {
+            // Dispose the synth to cancel all scheduled future events
+            if ('dispose' in voice && typeof (voice as any).dispose === 'function') {
+              (voice as any).dispose();
+            }
+            // Store info to recreate later
+            if (wrapper.instrumentType) {
+              toRecreate.push({ id, type: wrapper.instrumentType });
+            }
+            // Remove from cache - it will be recreated
+            delete this.instrumentVoices[id];
+          }
+        }
+        
+        // For SoundFont players
+        if (wrapper.kind === 'soundfont') {
+          if ('stop' in voice && typeof (voice as any).stop === 'function') {
+            (voice as any).stop();
+          }
+          // SoundFont players don't need disposal, just stop
+        }
+      } catch (e) {
+        // Ignore errors
+        if (disposeSynths) {
+          delete this.instrumentVoices[id];
+        }
       }
+    }
+
+    // Recreate disposed synths synchronously so they're ready immediately
+    if (disposeSynths && toRecreate.length > 0) {
+      await this.preloadInstruments(toRecreate);
     }
   }
 }

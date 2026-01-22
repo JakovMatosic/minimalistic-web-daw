@@ -319,8 +319,9 @@ export class Song {
       await this.prime();
     }
 
-    // Stop all currently playing notes (but keep instruments loaded!)
-    this.audio.stopAll();
+    // Reset stop time and dispose old synths to cancel scheduled events, then recreate them
+    this.audio.resetStopTime();
+    await this.audio.stopAll(true); // Dispose to cancel scheduled events
 
     // Duration of one 16th-note
     const noteStepDuration = 60 / this.bpm / 4;
@@ -419,7 +420,8 @@ export class Song {
 
 
   stop() {
-    this.audio.stopAll();
+    // Dispose synths to cancel all scheduled future events
+    this.audio.stopAll(true);
     if (this.stopTimer) {
       clearTimeout(this.stopTimer);
       this.stopTimer = null;
