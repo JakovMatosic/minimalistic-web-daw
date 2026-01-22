@@ -87,7 +87,7 @@
       <select [(ngModel)]="currentPatternId" (change)="handlePatternChange($event)"
         class="bg-gray-800 border border-gray-700 p-1 rounded">
         <option *ngFor="let p of currentInstrument.patterns; trackBy: trackByPatternId" [value]="p.id">
-          {{ p.name }}
+          {{ truncatePatternName(p.name) }}
         </option>
       </select>
     </label>

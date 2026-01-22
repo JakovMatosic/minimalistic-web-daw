@@ -482,4 +482,15 @@ export class Song {
     this.currentPattern.maxOctave = this.pianoRollMaxOctave;
     this.saveToStorage();
   }
+
+  /**
+   * Truncate pattern name to max 9 characters for display
+   * If longer than 9, shows first 6 characters + "..."
+   */
+  truncatePatternName(name: string): string {
+    if (name.length <= 9) {
+      return name;
+    }
+    return name.substring(0, 6) + '...';
+  }
 }
