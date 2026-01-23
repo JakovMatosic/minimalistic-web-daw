@@ -1,0 +1,34 @@
+.drum-roll-container {
+  height: 300px; /* Drums usually need less vertical space than piano */
+}
+
+.drum-label-cell {
+  box-sizing: border-box;
+}
+
+.bg-white-5 {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.drum-hit {
+  transition: transform 0.1s ease;
+  z-index: 10;
+}
+
+.grid-area {
+  /* This creates the 16-step "Sequencer" look */
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: calc(100% / 16) 100%, 100% calc(100% / 3);
+  cursor: crosshair;
+}
+
+.hit-inner {
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.drum-hit:hover .hit-inner {
+  transform: scale(1.3);
+  filter: brightness(1.5);
+}

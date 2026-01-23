@@ -1,0 +1,32 @@
+<div
+  class="drum-roll-container flex select-none bg-gray-950 border border-gray-800 rounded-lg overflow-hidden h-[300px]">
+
+  <div class="drum-labels w-24 border-r border-gray-800 bg-gray-900/50">
+    <div *ngFor="let drum of drums" class="flex items-center px-3 border-b border-gray-800/40"
+      [style.height]="getNoteHeight()">
+      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">{{ drum.name }}</span>
+    </div>
+  </div>
+
+  <div class="grid-area relative flex-1" (mousedown)="handleGridClick($event)">
+
+    <div class="absolute inset-0 flex flex-col pointer-events-none">
+      <div *ngFor="let d of drums" class="flex-1 border-b border-gray-800/30"></div>
+    </div>
+
+    <div class="absolute inset-0 flex pointer-events-none">
+      <div *ngFor="let i of [].constructor(16); let idx = index" class="flex-1 border-r border-gray-800/20"
+        [class.border-r-gray-700]="idx % 4 === 3">
+      </div>
+    </div>
+
+    <div *ngFor="let note of track.notes" class="drum-hit absolute flex justify-center"
+      [style.top]="getNoteTop(note.pitch)" [style.left]="(note.start / quarterSteps * 100) + '%'"
+      [style.width]="(100 / quarterSteps) + '%'" [style.height]="getNoteHeight()" [style.padding]="'4px 0'">
+
+      <div class="hit-inner w-[6px] h-full rounded-full shadow-sm" [style.backgroundColor]="getDrumColor(note.pitch)"
+        [style.boxShadow]="'0 0 10px ' + getDrumColor(note.pitch)">
+      </div>
+    </div>
+  </div>
+</div>

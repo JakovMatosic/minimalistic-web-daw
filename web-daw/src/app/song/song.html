@@ -5,46 +5,52 @@
     <!-- Octave Range Controls -->
 
     <!-- Key / Scale Controls -->
-    <label>
-      Key:
-      <select [(ngModel)]="rootKey" (change)="onKeyOrScaleChange()"
-        class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let key of keys; trackBy: trackByKey" [value]="key.value">
-          {{ key.label }}
-        </option>
-      </select>
-    </label>
+    <ng-container *ngIf="currentInstrument.type !== 'drum'">
+      <label>
+        Key:
+        <select [(ngModel)]="rootKey" (change)="onKeyOrScaleChange()"
+          class="bg-gray-800 border border-gray-700 p-1 rounded">
+          <option *ngFor="let key of keys; trackBy: trackByKey" [value]="key.value">
+            {{ key.label }}
+          </option>
+        </select>
+      </label>
 
-    <label>
-      Scale:
-      <select [(ngModel)]="scale" (change)="onKeyOrScaleChange()"
-        class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let scale of scaleTypes; trackBy: trackByScale" [value]="scale">
-          {{ scale }}
-        </option>
-      </select>
-    </label>
+      <label>
+        Scale:
+        <select [(ngModel)]="scale" (change)="onKeyOrScaleChange()"
+          class="bg-gray-800 border border-gray-700 p-1 rounded">
+          <option *ngFor="let scale of scaleTypes; trackBy: trackByScale" [value]="scale">
+            {{ scale }}
+          </option>
+        </select>
+      </label>
 
 
-    <label>
-      Lowest Octave:
-      <select [(ngModel)]="pianoRollMinOctave" (change)="updatePianoRollOctaves()"
-        class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
-          {{ oct }}
-        </option>
-      </select>
-    </label>
+      <label>
+        Lowest Octave:
+        <select [(ngModel)]="pianoRollMinOctave" (change)="updatePianoRollOctaves()"
+          class="bg-gray-800 border border-gray-700 p-1 rounded">
+          <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
+            {{ oct }}
+          </option>
+        </select>
+      </label>
 
-    <label>
-      Highest Octave:
-      <select [(ngModel)]="pianoRollMaxOctave" (change)="updatePianoRollOctaves()"
-        class="bg-gray-800 border border-gray-700 p-1 rounded">
-        <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
-          {{ oct }}
-        </option>
-      </select>
-    </label>
+      <label>
+        Highest Octave:
+        <select [(ngModel)]="pianoRollMaxOctave" (change)="updatePianoRollOctaves()"
+          class="bg-gray-800 border border-gray-700 p-1 rounded">
+          <option *ngFor="let oct of [2, 3, 4, 5, 6, 7]" [value]="oct">
+            {{ oct }}
+          </option>
+        </select>
+      </label>
+    </ng-container>
+
+    <div *ngIf="currentInstrument.type === 'drum'" class="text-xs text-gray-500 italic uppercase tracking-widest">
+      Drum Mapping Mode
+    </div>
 
     <!-- ...existing controls... -->
     <label>
@@ -107,9 +113,16 @@
     </button>
   </div>
 
-  <app-piano-roll [track]="currentPattern.track" [minOctave]="pianoRollMinOctave" [maxOctave]="pianoRollMaxOctave"
-    (ngModelChange)="saveToStorage()" [rootKey]="rootKey" [scale]="scale">
-  </app-piano-roll>
+  <ng-container [ngSwitch]="currentInstrument.type">
+
+    <app-drum-roll *ngSwitchCase="'drum'" [track]="currentPattern.track" (trackChange)="saveToStorage()">
+    </app-drum-roll>
+
+    <app-piano-roll *ngSwitchDefault [track]="currentPattern.track" [minOctave]="pianoRollMinOctave"
+      [maxOctave]="pianoRollMaxOctave" (ngModelChange)="saveToStorage()" [rootKey]="rootKey" [scale]="scale">
+    </app-piano-roll>
+
+  </ng-container>
 
   <app-playback [bpm]="bpm" [isPlaying]="isPlaying" [instruments]="instruments" (bpmChange)="bpm = $event"
     (togglePlay)="togglePlay()" (sequenceChange)="onSequenceChange($event)"

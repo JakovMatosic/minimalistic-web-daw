@@ -9,11 +9,12 @@ import { INSTRUMENT_LABELS, InstrumentType } from '../audio/instrument-types';
 import { Instrument, Pattern, createInstrument } from '../song/instruments/instrument-config';
 import { Frequency } from 'tone';
 import { KEYS, SCALES, ScaleType } from './scales/scales';
+import { DrumRoll } from '../drum-roll/drum-roll';
 
 @Component({
   selector: 'app-song',
   standalone: true,
-  imports: [CommonModule, FormsModule, PianoRoll, InstrumentSettingsBar, Playback],
+  imports: [CommonModule, FormsModule, PianoRoll, InstrumentSettingsBar, Playback, DrumRoll],
   templateUrl: './song.html',
   styleUrls: ['./song.css']
 })
@@ -323,13 +324,10 @@ export class Song {
 
   async play() {
     // If not primed, prime first (but this should be done via button)
-    if (!this.isPrimed) {
-      await this.prime();
-    }
+    await this.prime();
 
     // Reset stop time and dispose old synths to cancel scheduled events, then recreate them
     this.audio.resetStopTime();
-    await this.audio.stopAll(true); // Dispose to cancel scheduled events
 
     // Duration of one 16th-note
     const noteStepDuration = 60 / this.bpm / 4;
@@ -376,15 +374,16 @@ export class Song {
             ? instrument.volume / 100
             : 0.8;
 
-        const isSoundFont =
-          this.audio.instrumentVoices[instrument.id]?.kind === 'soundfont';
+        const needsPitchString =
+          this.audio.instrumentVoices[instrument.id]?.kind === 'soundfont' ||
+          instrument.type === 'drum';
 
         for (let n = 0; n < notes.length; n++) {
           const note = notes[n];
           const when = stepStartTime + note.start * noteStepDuration;
           const dur = Math.max(0.02, note.duration * noteStepDuration);
 
-          if (isSoundFont) {
+          if (needsPitchString) {
             // Use pitch string
             this.audio.playNote(
               instrument.id,
