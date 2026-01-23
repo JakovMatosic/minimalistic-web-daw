@@ -79,16 +79,14 @@ export class PianoRoll implements OnInit, OnChanges {
     event.stopPropagation();
     this.selectedNote = note;
 
-    if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
-      this.deleteNote(note);
-      return;
-    }
-
     const target = event.target as HTMLElement;
     if (target.classList.contains('resize-handle-left')) {
       this.startResizing(note, 'left');
     } else if (target.classList.contains('resize-handle-right')) {
       this.startResizing(note, 'right');
+    } else {
+      // Clicking on the note itself (not a resize handle) deletes it
+      this.deleteNote(note);
     }
   }
 
