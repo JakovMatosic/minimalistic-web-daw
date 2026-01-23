@@ -270,7 +270,6 @@ export class Song {
 
     try {
       await this.audio.ensureStarted();
-
       const instrumentsToPreload = this.instruments.map(inst => ({
         id: inst.id,
         type: inst.type || 'synth'
@@ -278,21 +277,16 @@ export class Song {
 
       await this.audio.preloadInstruments(instrumentsToPreload);
 
-      // Apply volumes to all preloaded instruments
+      // CRITICAL: Apply volumes immediately after preloading is finished
       this.instruments.forEach(inst => {
-        if (inst.volume !== undefined) {
-          const volumeNormalized = inst.volume / 100;
-          this.audio.updateVolume(inst.id, volumeNormalized);
-        }
+        const vol = (inst.volume ?? 80) / 100;
+        this.audio.updateVolume(inst.id, vol);
       });
 
-      // Build pitch cache now!
       this.buildPitchFrequencyCache();
-
       this.isPrimed = true;
     } catch (e) {
       console.error('Priming failed:', e);
-      this.isPrimed = false;
     } finally {
       this.isPriming = false;
     }

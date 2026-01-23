@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import * as Tone from 'tone';
 import Soundfont, { InstrumentName } from 'soundfont-player';
 
-type AnyVoice = Tone.FMSynth | Tone.PolySynth | Tone.PluckSynth | Tone.Sampler | Soundfont.Player;
+type AnyVoice = Tone.FMSynth | Tone.PolySynth | Tone.Sampler | Soundfont.Player;
 type VoiceWrapper = {
   voice: AnyVoice;
   kind: 'soundfont' | 'tone';
@@ -12,9 +12,19 @@ type VoiceWrapper = {
 const SOUNDFONT_MAP: Record<string, InstrumentName> = {
   piano: 'acoustic_grand_piano',
   ep: 'electric_piano_1',
-  bass: 'acoustic_bass',
+  bass: 'lead_8_bass__lead',
   guitar: 'acoustic_guitar_nylon',
   strings: 'string_ensemble_1'
+};
+
+const INSTRUMENT_GAIN_CORRECTION: Record<string, number> = {
+  bass: 7,     // Up a lot
+  guitar: 1.6,   // Up a medium amount
+  piano: 2.3,    // Up a little
+  ep: 2.6,       // Up a little
+  synth: 0.7,   // Down a little
+  drum: 0.7,     // Down a little
+  pad: 1,      // Down a little
 };
 
 @Injectable({ providedIn: 'root' })
@@ -161,9 +171,6 @@ export class AudioEngine {
         }).toDestination();
         break;
 
-      case 'pluck':
-        inst = new Tone.PluckSynth().toDestination();
-        break;
 
       case 'drum':
         inst = new Tone.Sampler({
@@ -224,33 +231,37 @@ export class AudioEngine {
     }
   }
 
-  /**
-   * Update the volume of an existing instrument voice.
-   */
   updateVolume(instrumentId: string, volume: number) {
-    const inst = this.instrumentVoices[instrumentId];
-    if (!inst) return;
+    const entry = this.instrumentVoices[instrumentId];
+    if (!entry) return;
 
-    // Handle Soundfont player - volume is set per note, so we don't need to update here
-    if ('play' in inst && typeof inst.play === 'function' && !('triggerAttackRelease' in inst)) {
-      // Soundfont volume is handled per note in playNote
-      return;
-    }
+    // DO NOT apply correction to velocity — only to instrument loudness
+    const multiplier =
+      INSTRUMENT_GAIN_CORRECTION[entry.instrumentType || ''] ?? 1.0;
 
-    // For Tone.js synths: set volume on the synth itself
-    // Volume conversion: 0-1 range to dB
-    // 0 = -96dB (silent), 1 = 0dB (full volume)
-    const db = volume <= 0 ? -96 : Math.max(-24, (volume - 1) * 24);
-    if ((inst as any).volume) {
-      (inst as any).volume.value = db;
+    // Clamp UI volume to a sane range
+    const v = Math.max(0, volume);
+
+    // Apply correction here and ONLY here
+    const corrected = v * multiplier;
+
+    // Convert linear gain → decibels
+    // -60 dB is effectively silent but stable
+    const db = corrected === 0
+      ? -60
+      : 20 * Math.log10(corrected);
+
+    // SoundFont instruments cannot be controlled here
+    if (entry.kind === 'soundfont') return;
+
+    const inst = entry.voice as any;
+
+    if (inst.volume && typeof inst.volume.rampTo === 'function') {
+      inst.volume.rampTo(db, 0.1);
     }
   }
 
-  /**
-   * Play a note with the specified instrument.
-   * Adjusted to handle SoundFont players and Tone.js synths.
-   * Note: Voice should be pre-created with preloadInstruments() for best performance.
-   */
+
   /**
    * Reset the stop timestamp and start a new playback session.
    * Call this when starting a new playback.
@@ -269,33 +280,31 @@ export class AudioEngine {
 
   playNote(
     instrumentId: string,
-    pitchOrFreq: string | number, // string for SoundFont, number for Tone
+    pitchOrFreq: string | number,
     when: number,
     duration: number,
     volume = 1
   ) {
-    // Don't schedule notes if stop was called
-    if (this.stopTime > 0 && when >= this.stopTime) {
-      return; // This note was scheduled after stop was called
-    }
+    if (this.stopTime > 0 && when >= this.stopTime) return;
 
     const entry = this.instrumentVoices[instrumentId];
     if (!entry) return;
+
+    const multiplier = INSTRUMENT_GAIN_CORRECTION[entry.instrumentType || ''] || 1.0;
+    const adjustedVolume = volume * multiplier;
 
     const inst = entry.voice;
     const dur = duration < 0.05 ? 0.05 : duration;
 
     if (entry.kind === 'soundfont') {
-      // SoundFont requires pitch string
       (inst as any).play(pitchOrFreq as string, when, {
         duration: dur,
-        gain: volume
+        gain: adjustedVolume
       });
       return;
     }
 
-    // Tone.js synths use frequency directly (FAST PATH)
-    (inst as any).triggerAttackRelease(pitchOrFreq as number, dur, when);
+    (inst as any).triggerAttackRelease(pitchOrFreq as number, dur, when, volume);
   }
 
   async stopAll(disposeSynths = false) {
@@ -308,21 +317,21 @@ export class AudioEngine {
     // Stop all currently sounding voices
     const instrumentIds = Object.keys(this.instrumentVoices);
     const toRecreate: Array<{ id: string; type: string }> = [];
-    
+
     for (const id of instrumentIds) {
       const wrapper = this.instrumentVoices[id];
       if (!wrapper) continue;
 
       try {
         const voice = wrapper.voice;
-        
+
         // For Tone.js synths
         if (wrapper.kind === 'tone') {
           // Always release currently playing notes
           if ('releaseAll' in voice && typeof (voice as any).releaseAll === 'function') {
             (voice as any).releaseAll();
           }
-          
+
           // Only dispose if explicitly requested (when actually stopping, not when starting new playback)
           if (disposeSynths) {
             // Dispose the synth to cancel all scheduled future events
@@ -337,7 +346,7 @@ export class AudioEngine {
             delete this.instrumentVoices[id];
           }
         }
-        
+
         // For SoundFont players
         if (wrapper.kind === 'soundfont') {
           if ('stop' in voice && typeof (voice as any).stop === 'function') {
