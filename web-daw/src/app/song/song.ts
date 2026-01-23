@@ -487,4 +487,66 @@ export class Song {
     }
     return name.substring(0, 6) + '...';
   }
+
+  newSong() {
+    if (confirm('Are you sure you want to start a new song? This will delete all your current work.')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  }
+
+  downloadSong() {
+    const data = {
+      instruments: this.instruments,
+      currentInstrumentId: this.currentInstrumentId,
+      currentPatternId: this.currentPatternId,
+      rootKey: this.rootKey,
+      scale: this.scale,
+    };
+    
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'song.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        const data = JSON.parse(json);
+        
+        // Validate the data structure
+        if (!data || typeof data !== 'object') {
+          alert('Invalid file format');
+          return;
+        }
+
+        // Clear current localStorage and load the new data
+        localStorage.clear();
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+        
+        // Reload the page to apply the changes
+        window.location.reload();
+      } catch (error) {
+        alert('Error loading file. Please make sure it is a valid song file.');
+        console.error('Error loading song file:', error);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset the input so the same file can be selected again
+    input.value = '';
+  }
 }

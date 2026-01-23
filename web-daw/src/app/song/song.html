@@ -131,4 +131,17 @@
 
   <app-instrument-settings-bar [instruments]="instruments"
     (settingsChange)="onInstrumentSettingsChange()"></app-instrument-settings-bar>
+
+  <div class="mt-8 flex justify-center gap-4">
+    <button class="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded text-sm font-semibold" (click)="newSong()">
+      🎵 New Song
+    </button>
+    <button class="bg-green-700 hover:bg-green-600 px-4 py-2 rounded text-sm font-semibold" (click)="downloadSong()">
+      💾 Download Song
+    </button>
+    <label class="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded text-sm font-semibold cursor-pointer">
+      📤 Upload Song
+      <input type="file" accept=".json" (change)="onFileSelected($event)" class="hidden">
+    </label>
+  </div>
 </div>
