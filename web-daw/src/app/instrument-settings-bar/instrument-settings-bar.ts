@@ -11,12 +11,7 @@ import { CommonModule } from '@angular/common';
 })
 export class InstrumentSettingsBar {
   @Input() instruments: any[] = [];
-  @Output() openSettings = new EventEmitter<any>();
   @Output() settingsChange = new EventEmitter<void>();
-
-  handleOpenSettings(inst: any) {
-    this.openSettings.emit(inst);
-  }
 
   onVolumeChange() {
     this.settingsChange.emit();

@@ -20,9 +20,6 @@ export interface Instrument {
   type: InstrumentType;
   patterns: Pattern[];
   volume?: number;
-  detune?: number;
-  decay?: number;
-  reverb?: number;
 }
 
 /** Default octave ranges per instrument */
@@ -52,9 +49,6 @@ export function createInstrument(
     name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${index}`,
     type,
     volume: 80,
-    detune: 0,
-    decay: 50,
-    reverb: 0,
     patterns: [
       {
         id: 'p1',

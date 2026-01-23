@@ -34,8 +34,6 @@ export class Song {
   currentPatternId = 'p1';
   newInstrumentType = 'synth';
   showInstrumentPopup = false;
-  showInstrumentSettingsPopup = false;
-  selectedInstrument: Instrument | null = null;
 
   // playback
   bpm = 120;
@@ -233,11 +231,6 @@ export class Song {
     this.pianoRollMaxOctave = pattern.maxOctave;
 
     this.saveToStorage();
-  }
-
-  openInstrumentSettings(inst: Instrument) {
-    this.selectedInstrument = inst;
-    this.showInstrumentSettingsPopup = true;
   }
 
   onInstrumentSettingsChange() {
