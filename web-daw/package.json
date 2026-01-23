@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy": "ng deploy --base-href=/minimalistic-web-daw/"
   },
   "prettier": {
     "printWidth": 100,
@@ -41,6 +42,7 @@
     "@angular/cli": "^20.3.6",
     "@angular/compiler-cli": "^20.3.0",
     "@types/jasmine": "~5.1.0",
+    "angular-cli-ghpages": "^3.0.2",
     "autoprefixer": "^10.4.21",
     "baseline-browser-mapping": "^2.9.14",
     "jasmine-core": "~5.9.0",
