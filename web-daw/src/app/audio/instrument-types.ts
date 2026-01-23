@@ -6,7 +6,10 @@ export type InstrumentType =
   | 'piano'
   | 'ep'
   | 'guitar'
-  | 'strings';
+  | 'strings'
+  | 'distortion_guitar'
+  | 'trombone'
+  | 'choir';
 
 export const INSTRUMENT_LABELS: Record<InstrumentType, string> = {
   synth: 'Synth',
@@ -16,5 +19,8 @@ export const INSTRUMENT_LABELS: Record<InstrumentType, string> = {
   piano: 'Piano',
   ep: 'Electric Piano',
   guitar: 'Guitar',
-  strings: 'Strings'
+  strings: 'Strings',
+  distortion_guitar: 'Distortion Guitar',
+  trombone: 'Trombone',
+  choir: 'Choir'
 };

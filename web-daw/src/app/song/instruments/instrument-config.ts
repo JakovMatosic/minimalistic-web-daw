@@ -34,7 +34,10 @@ export const OCTAVE_RANGES: Record<InstrumentType, [number, number]> = {
   guitar: [3, 6],
   strings: [3, 6],
   pad: [3, 7],
-  synth: [4, 6]
+  synth: [4, 6],
+  distortion_guitar: [3, 6],
+  trombone: [2, 5],
+  choir: [3, 6]
 };
 
 /** Factory: creates a new instrument with its default pattern */

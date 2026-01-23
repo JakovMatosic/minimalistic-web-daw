@@ -14,7 +14,10 @@ const SOUNDFONT_MAP: Record<string, InstrumentName> = {
   ep: 'electric_piano_1',
   bass: 'lead_8_bass__lead',
   guitar: 'acoustic_guitar_nylon',
-  strings: 'string_ensemble_1'
+  strings: 'string_ensemble_1',
+  distortion_guitar: 'distortion_guitar',
+  trombone: 'trombone',
+  choir: 'pad_4_choir'
 };
 
 const INSTRUMENT_GAIN_CORRECTION: Record<string, number> = {
@@ -25,6 +28,10 @@ const INSTRUMENT_GAIN_CORRECTION: Record<string, number> = {
   synth: 0.7,   // Down a little
   drum: 0.7,     // Down a little
   pad: 1,      // Down a little
+  strings: 1.75,  // Up a medium amount
+  distortion_guitar: 1.8,  // Up a medium amount
+  trombone: 7,  // Up a medium amount
+  choir: 1.2,  // Up a little
 };
 
 @Injectable({ providedIn: 'root' })
