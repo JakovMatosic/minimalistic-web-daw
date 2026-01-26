@@ -1,7 +1,6 @@
 ┌─────────────────────────────┐
 │        AppComponent         │
-│  (layout / container        │
-│     / Tailwind)             │
+│   (global layout / shell)   │
 └─────────────┬───────────────┘
               │
               ▼
@@ -9,32 +8,44 @@
    │    AudioEngineService  │
    │------------------------│
    │ - Tone.js / WebAudio   │
-   │ - Synths & Instruments │
+   │ - Instruments & Synths │
    │ - Transport / BPM      │
-   │ - Loops / Sequencer    │
-   │ - Effects / Mixer      │
-   │ - Observables for UI   │
-   └───────┬────────────────┘
-           │
-           │ emits state via Observables
-           │
-           ▼
-┌──────────┴───────────┐
-│      Components      │
-│----------------------│
-│  Transport           │
-│  - Play / Stop       │
-│  - Tempo display     │
-│----------------------│
-│  Sequencer           │
-│  - Step grid         │
-│  - Trigger notes     │
-│----------------------│
-│  Synth Panel         │
-│  - Knobs / Sliders   │
-│  - Waveform / Filter │
-│----------------------│
-│  Mixer / Effects     │
-│  - Track volumes     │
-│  - Reverb / Delay    │
-└──────────────────────┘
+   │ - Pattern playback     │
+   │ - Sequencing logic     │
+   │ - State streams (RxJS) │
+   └─────────────┬──────────┘
+                 │ provides audio + timing
+                 │
+                 ▼
+        ┌───────────────────────┐
+        │     SongComponent     │
+        │-----------------------│
+        │ • Song-level state    │
+        │ • Pattern selection   │
+        │ • Instrument mgmt     │
+        │ • Key / Scale / Range │
+        │ • New / Save / Load   │
+        └───────┬───────┬───────┘
+                │       │
+                │       │ passes selected pattern,
+                │       │ instrument & scale context
+                │       │
+                ▼       ▼
+    ┌─────────────────────┐   ┌────────────────┐   
+    │   PlaybackComponent │   │  PianoRoll     | 
+    |                     |   |  DrumRoll      |
+    │---------------------│   │----------------│   
+    │ • BPM control       │   │ • Note editing │   
+    │ • Play / Stop       │   │ • Grid (pitch  │   
+    │ • Step Sequencer    │   │   vs time)     │   
+    │   (pattern order)   │   │ • Pattern data │   
+    └──────────┬──────────┘   └─────────┬──────┘   
+               │                     │
+               │ note data           │ sequence data
+               ▼                     ▼
+        ┌────────────────────────────────┐
+        │  InstrumentSettingsBarComponent│
+        │--------------------------------│
+        │ • Per-instrument volume        │
+        │ • Simple mixing layer          │
+        └────────────────────────────────┘
