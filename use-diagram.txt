@@ -1,0 +1,26 @@
+┌─────────────┐
+│ Korisnik    │
+│ (unos, UI   │
+│ interakcije)│
+└─────┬───────┘
+      │
+      ▼
+┌───────────────────────┐
+│ Angular aplikacija    │
+│---------------------- │
+│ • UI komponente       │
+│ • Upravljanje stanjem │
+│ • Logika sekvencera   │
+│ • Obrada MIDI podataka│
+└─────────┬─────────────┘
+          │ pozivi prema audio sloju
+          ▼
+┌────────────────────────┐
+│ Audio engine           │
+│ (Web Audio API)        │
+│------------------------│
+│ • Generiranje zvuka    │
+│ • Upravljanje tempom   │
+│ • Reprodukcija nota    │
+│ • Miješanje signala    │
+└────────────────────────┘
